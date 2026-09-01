@@ -124,9 +124,9 @@ export default function Onboarding() {
       <View style={styles.bottomSection}>
         <View style={styles.dotsContainer}>
           {SLIDES.map((_, i) => {
-            const dotWidth = scrollX.interpolate({
+            const dotScale = scrollX.interpolate({
               inputRange: [(i - 1) * width, i * width, (i + 1) * width],
-              outputRange: [8, 28, 8],
+              outputRange: [1, 1.5, 1],
               extrapolate: 'clamp',
             });
             const dotOpacity = scrollX.interpolate({
@@ -140,7 +140,7 @@ export default function Onboarding() {
                 style={[
                   styles.dot,
                   {
-                    width: dotWidth,
+                    transform: [{ scale: dotScale }],
                     opacity: dotOpacity,
                     backgroundColor: SLIDES[currentIndex].gradient[0],
                   },
@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 32, fontWeight: '800', color: '#F0F0F5', textAlign: 'center', marginBottom: 16, letterSpacing: -0.5 },
   subtitle: { fontSize: 17, color: '#8B8B9E', textAlign: 'center', lineHeight: 26 },
   bottomSection: { paddingHorizontal: 24, paddingBottom: 50, alignItems: 'center' },
-  dotsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 32, gap: 8 },
-  dot: { height: 8, borderRadius: 4 },
+  dotsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 32, gap: 12 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
   nextBtn: { width: '100%', height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   nextText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
 });

@@ -33,8 +33,20 @@ export default function Settings() {
 
       <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
 
+      {/* App Updates */}
+      <View style={[styles.updateCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.updateTitle, { color: theme.text }]}>App Updates</Text>
+          <Text style={[styles.updateSub, { color: theme.textSecondary }]}>Check for new features and bug fixes</Text>
+        </View>
+        <TouchableOpacity style={[styles.updateBtn, { backgroundColor: theme.primaryLight }]} onPress={() => router.push('/updater')}>
+          <Feather name="download-cloud" size={18} color={theme.primary} />
+          <Text style={[styles.updateBtnText, { color: theme.primary }]}>Check</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Theme Preference */}
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>App Theme</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 24 }]}>App Theme</Text>
       <Text style={[styles.sectionSub, { color: theme.textSecondary }]}>Select your preferred color scheme</Text>
       <View style={styles.themeRow}>
         {THEMES.map((t) => (
@@ -84,7 +96,7 @@ export default function Settings() {
           </View>
           <View style={{ marginLeft: 16 }}>
             <Text style={[styles.aboutTitle, { color: theme.text }]}>GritMath</Text>
-            <Text style={[styles.aboutText, { color: theme.textSecondary }]}>Version 1.0.0</Text>
+            <Text style={[styles.aboutText, { color: theme.textSecondary }]}>Version {require('../package.json').version}</Text>
           </View>
         </View>
         <Text style={[styles.aboutText, { color: theme.textSecondary }]}>100% offline speed math trainer</Text>
@@ -127,6 +139,12 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
   sectionSub: { fontSize: 13, marginBottom: 16 },
   
+  updateCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 12 },
+  updateTitle: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  updateSub: { fontSize: 12 },
+  updateBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  updateBtnText: { fontSize: 14, fontWeight: '700' },
+
   themeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   themeBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
   themeLabel: { fontSize: 12, fontWeight: '600', marginTop: 6 },

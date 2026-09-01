@@ -50,6 +50,7 @@ const KEYS = {
   ONBOARDING_DONE: 'onboardingDone',
   CATEGORY_STATS: 'categoryStats',
   THEME_PREFERENCE: 'themePreference',
+  QUIZ_HISTORY: 'quizHistory',
 };
 
 // ──────────────────── Helpers ────────────────────────────
@@ -67,7 +68,10 @@ const setVal = (key, value) => {
 
 // ──────────────────── High Scores ────────────────────────
 
-export const getHighScores = () => getVal(KEYS.HIGH_SCORES, {});
+export const getHighScores = () => {
+  const scores = getVal(KEYS.HIGH_SCORES, {});
+  return typeof scores === 'object' && scores !== null && !Array.isArray(scores) ? scores : {};
+};
 
 export const updateHighScore = (category, score, total) => {
   const scores = getHighScores();
@@ -116,7 +120,10 @@ export const recordPracticeDay = () => {
 
 // ──────────────────── Total Solved ───────────────────────
 
-export const getTotalSolved = () => getVal(KEYS.TOTAL_SOLVED, 0);
+export const getTotalSolved = () => {
+  const total = getVal(KEYS.TOTAL_SOLVED, 0);
+  return typeof total === 'number' && !isNaN(total) ? total : 0;
+};
 
 export const addToTotalSolved = (count) => {
   setVal(KEYS.TOTAL_SOLVED, getTotalSolved() + count);
@@ -139,17 +146,24 @@ export const setOnboardingDone = () => setVal(KEYS.ONBOARDING_DONE, true);
 // ──────────────────── Quiz History ───────────────────────
 
 export const saveQuizSession = (session) => {
-  const history = getVal(KEYS.QUIZ_HISTORY, []);
+  let history = getVal(KEYS.QUIZ_HISTORY, []);
+  if (!Array.isArray(history)) history = [];
   history.unshift({ ...session, date: new Date().toISOString() });
   if (history.length > 50) history.length = 50;
   setVal(KEYS.QUIZ_HISTORY, history);
 };
 
-export const getQuizHistory = () => getVal(KEYS.QUIZ_HISTORY, []);
+export const getQuizHistory = () => {
+  const history = getVal(KEYS.QUIZ_HISTORY, []);
+  return Array.isArray(history) ? history : [];
+};
 
 // ──────────────────── Category Stats ─────────────────────
 
-export const getCategoryStats = () => getVal(KEYS.CATEGORY_STATS, {});
+export const getCategoryStats = () => {
+  const stats = getVal(KEYS.CATEGORY_STATS, {});
+  return typeof stats === 'object' && stats !== null && !Array.isArray(stats) ? stats : {};
+};
 
 export const updateCategoryStats = (category, attempted, correct) => {
   const stats = getCategoryStats();

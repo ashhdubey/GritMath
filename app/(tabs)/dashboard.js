@@ -124,6 +124,14 @@ export default function Dashboard() {
         </View>
       )}
       
+      {totalSolved === 0 && (
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyIcon, { color: theme.textSecondary }]}>🚀</Text>
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>Welcome to GritMath!</Text>
+          <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>Play your first quiz in the Practice tab to start seeing your performance metrics here.</Text>
+        </View>
+      )}
+
       <View style={{ height: 120 }} />
     </ScrollView>
   );
@@ -158,4 +166,8 @@ const styles = StyleSheet.create({
   listCategory: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
   listMeta: { fontSize: 13, fontWeight: '500' },
   listPct: { fontSize: 16, fontWeight: '700' },
+  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 40, paddingHorizontal: 20 },
+  emptyIcon: { fontSize: 48, marginBottom: 16 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
+  emptySubtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
 });
