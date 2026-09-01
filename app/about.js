@@ -10,7 +10,7 @@ const LINKS = [
   { icon: 'globe', label: 'Portfolio', username: 'ashhdubey.in', url: 'https://ashhdubey.in/' },
 ];
 
-export default function Developer() {
+export default function About() {
   const router = useRouter();
   const theme = useTheme();
   const accentColor = useAppStore(state => state.accentColor);
@@ -21,7 +21,35 @@ export default function Developer() {
         <Feather name="arrow-left" size={24} color={theme.text} />
       </TouchableOpacity>
 
-      <Text style={[styles.title, { color: theme.text }]}>Developer</Text>
+      <Text style={[styles.title, { color: theme.text }]}>About</Text>
+
+      {/* App Section */}
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, marginBottom: 24 }]}>
+        <View style={styles.headerRow}>
+          <View style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
+            <Feather name="hash" size={40} color={theme.primary} />
+          </View>
+          
+          <View style={styles.headerInfo}>
+            <Text style={[styles.devName, { color: theme.text }]}>
+              GritMath
+            </Text>
+            <Text style={[styles.devTitle, { color: theme.primary }]}>
+              Version {require('../package.json').version}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[styles.bio, { color: theme.textSecondary }]}>
+          100% offline speed math trainer. Made for competitive exam preparation.
+        </Text>
+        
+        <Text style={[styles.bio, { color: theme.primary, fontWeight: '700', marginBottom: 0 }]}>
+          Zero ads. Zero accounts. Zero cost.
+        </Text>
+      </View>
+
+      {/* Developer Section */}
 
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.headerRow}>

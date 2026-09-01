@@ -88,33 +88,17 @@ export default function Settings() {
       </TouchableOpacity>
       <Text style={[styles.resetSub, { color: theme.textSecondary }]}>Erases streaks, high scores, and quiz history</Text>
 
-      {/* About App */}
-      <View style={[styles.aboutSection, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-          <View style={[styles.logoPlaceholder, { backgroundColor: theme.primaryLight }]}>
-            <Feather name="hash" size={24} color={theme.primary} />
-          </View>
-          <View style={{ marginLeft: 16 }}>
-            <Text style={[styles.aboutTitle, { color: theme.text }]}>GritMath</Text>
-            <Text style={[styles.aboutText, { color: theme.textSecondary }]}>Version {require('../package.json').version}</Text>
-          </View>
-        </View>
-        <Text style={[styles.aboutText, { color: theme.textSecondary }]}>100% offline speed math trainer</Text>
-        <Text style={[styles.aboutText, { color: theme.textSecondary }]}>Made for competitive exam preparation</Text>
-        <Text style={[styles.aboutText, { marginTop: 8, color: theme.primary, fontWeight: '700' }]}>Zero ads. Zero accounts. Zero cost.</Text>
-      </View>
-
-      {/* Developer Profile Link */}
+      {/* About App & Developer Link */}
       <TouchableOpacity 
-        style={[styles.developerBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        onPress={() => router.push('/developer')}
+        style={[styles.developerBtn, { backgroundColor: theme.surface, borderColor: theme.border, marginTop: 36 }]}
+        onPress={() => router.push('/about')}
       >
         <View style={[styles.developerIcon, { backgroundColor: theme.primaryLight }]}>
-          <Feather name="code" size={20} color={theme.primary} />
+          <Feather name="info" size={20} color={theme.primary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.developerBtnTitle, { color: theme.text }]}>About the Developer</Text>
-          <Text style={[styles.developerBtnSub, { color: theme.textSecondary }]}>Connect with Ashish Kumar Dubey</Text>
+          <Text style={[styles.developerBtnTitle, { color: theme.text }]}>About</Text>
+          <Text style={[styles.developerBtnSub, { color: theme.textSecondary }]}>App Info & Developer Profile</Text>
         </View>
         <Feather name="chevron-right" size={20} color={theme.textSecondary} />
       </TouchableOpacity>
@@ -149,11 +133,6 @@ const styles = StyleSheet.create({
   resetBtn: { flexDirection: 'row', borderRadius: 12, padding: 16, marginTop: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   resetText: { fontSize: 16, fontWeight: '700' },
   resetSub: { fontSize: 12, marginTop: 8, textAlign: 'center' },
-  
-  aboutSection: { marginTop: 36, borderRadius: 16, padding: 20, borderWidth: 1 },
-  logoPlaceholder: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  aboutTitle: { fontSize: 22, fontWeight: '800', marginBottom: 2 },
-  aboutText: { fontSize: 14, lineHeight: 22 },
   
   developerBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 16, borderRadius: 16, padding: 16, borderWidth: 1 },
   developerIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
