@@ -87,7 +87,7 @@ export default function Updater() {
       
       await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
         data: contentUri,
-        flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+        flags: 268435457, // FLAG_GRANT_READ_URI_PERMISSION | FLAG_ACTIVITY_NEW_TASK
         type: 'application/vnd.android.package-archive'
       });
     } catch (err) {
