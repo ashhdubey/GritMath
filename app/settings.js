@@ -104,27 +104,20 @@ export default function Settings() {
         <Text style={[styles.aboutText, { marginTop: 8, color: theme.primary, fontWeight: '700' }]}>Zero ads. Zero accounts. Zero cost.</Text>
       </View>
 
-      {/* Developer Profile */}
-      <View style={[styles.developerSection, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.devHeader, { color: theme.textSecondary }]}>DEVELOPED BY</Text>
-        <Text style={[styles.devName, { color: theme.text }]}>Ashish Kumar Dubey</Text>
-        <Text style={[styles.devTitle, { color: theme.primary }]}>Software Engineer</Text>
-        
-        <TouchableOpacity style={styles.devLinkRow} onPress={() => Linking.openURL('https://github.com/ashhdubey')}>
-          <Feather name="github" size={18} color={theme.textSecondary} />
-          <Text style={[styles.devLink, { color: theme.primary }]}>github.com/ashhdubey</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.devLinkRow} onPress={() => Linking.openURL('https://www.linkedin.com/in/ashhdubey/')}>
-          <Feather name="linkedin" size={18} color={theme.primary} />
-          <Text style={[styles.devLink, { color: theme.primary }]}>linkedin.com/in/ashhdubey</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.devLinkRow} onPress={() => Linking.openURL('https://ashhdubey.in/')}>
-          <Feather name="globe" size={18} color={theme.primary} />
-          <Text style={[styles.devLink, { color: theme.primary }]}>ashhdubey.in</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Developer Profile Link */}
+      <TouchableOpacity 
+        style={[styles.developerBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        onPress={() => router.push('/developer')}
+      >
+        <View style={[styles.developerIcon, { backgroundColor: theme.primaryLight }]}>
+          <Feather name="code" size={20} color={theme.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.developerBtnTitle, { color: theme.text }]}>About the Developer</Text>
+          <Text style={[styles.developerBtnSub, { color: theme.textSecondary }]}>Connect with Ashish Kumar Dubey</Text>
+        </View>
+        <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+      </TouchableOpacity>
 
       <View style={{ height: 60 }} />
     </ScrollView>
@@ -162,10 +155,8 @@ const styles = StyleSheet.create({
   aboutTitle: { fontSize: 22, fontWeight: '800', marginBottom: 2 },
   aboutText: { fontSize: 14, lineHeight: 22 },
   
-  developerSection: { marginTop: 20, borderRadius: 16, padding: 20, borderWidth: 1 },
-  devHeader: { fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: 8 },
-  devName: { fontSize: 22, fontWeight: '900', marginBottom: 4 },
-  devTitle: { fontSize: 15, fontWeight: '700', marginBottom: 20, letterSpacing: 0.5 },
-  devLinkRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  devLink: { fontSize: 15, marginLeft: 12, fontWeight: '600' },
+  developerBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 16, borderRadius: 16, padding: 16, borderWidth: 1 },
+  developerIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  developerBtnTitle: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  developerBtnSub: { fontSize: 13 },
 });

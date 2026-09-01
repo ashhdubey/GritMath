@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Animated, StyleSheet, Text, useColorScheme, Modal, TouchableOpacity } from 'react-native';
+import { View, Animated, StyleSheet, Text, useColorScheme, Modal, TouchableOpacity, AppState } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as ExpoSplashScreen from 'expo-splash-screen';
-import { loadStorage } from '../src/storage/storage';
+import { loadStorage, recordActiveMinutes } from '../src/storage/storage';
 import { useTheme } from '../src/theme';
 
 // Keep the native splash screen visible until we're ready
@@ -65,8 +65,31 @@ export default function RootLayout() {
 function MainApp() {
   const theme = useTheme();
   const router = useRouter();
+  const appState = useRef(AppState.currentState);
+  const sessionStart = useRef(Date.now());
   
   const [updateInfo, setUpdateInfo] = useState(null);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to the foreground!
+        sessionStart.current = Date.now();
+      }
+      
+      if (appState.current === 'active' && nextAppState.match(/inactive|background/)) {
+        // App has gone to the background!
+        const elapsedMinutes = (Date.now() - sessionStart.current) / 60000;
+        recordActiveMinutes(elapsedMinutes);
+      }
+      
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const checkUpdate = async () => {

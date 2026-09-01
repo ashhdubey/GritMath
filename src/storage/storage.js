@@ -51,6 +51,7 @@ const KEYS = {
   CATEGORY_STATS: 'categoryStats',
   THEME_PREFERENCE: 'themePreference',
   QUIZ_HISTORY: 'quizHistory',
+  DAILY_ACTIVE_TIME: 'dailyActiveTime',
 };
 
 // ──────────────────── Helpers ────────────────────────────
@@ -95,7 +96,7 @@ export const updateHighScore = (category, score, total) => {
 
 const toDateString = (date) => date.toISOString().slice(0, 10);
 
-export const getStreak = () => getVal(KEYS.DAILY_STREAK, { count: 0, lastDate: null });
+export const getStreak = () => getVal(KEYS.DAILY_STREAK, { count: 0, max: 0, lastDate: null });
 
 export const recordPracticeDay = () => {
   const streak = getStreak();
@@ -110,12 +111,38 @@ export const recordPracticeDay = () => {
   if (streak.lastDate === yesterdayStr) {
     streak.count += 1;
   } else {
+    // If last practice was before yesterday, streak resets.
     streak.count = 1;
+  }
+
+  // Update max streak if current streak exceeds it
+  if (streak.count > (streak.max || 0)) {
+    streak.max = streak.count;
   }
 
   streak.lastDate = today;
   setVal(KEYS.DAILY_STREAK, streak);
   return streak;
+};
+
+// ──────────────────── Daily Active Time (Heatmap) ─────────
+
+export const getDailyActiveTime = () => {
+  const times = getVal(KEYS.DAILY_ACTIVE_TIME, {});
+  return typeof times === 'object' && times !== null && !Array.isArray(times) ? times : {};
+};
+
+export const recordActiveMinutes = (minutes) => {
+  if (minutes <= 0) return;
+  const times = getDailyActiveTime();
+  const today = toDateString(new Date());
+  
+  if (!times[today]) {
+    times[today] = 0;
+  }
+  times[today] += minutes;
+  
+  setVal(KEYS.DAILY_ACTIVE_TIME, times);
 };
 
 // ──────────────────── Total Solved ───────────────────────
@@ -165,13 +192,14 @@ export const getCategoryStats = () => {
   return typeof stats === 'object' && stats !== null && !Array.isArray(stats) ? stats : {};
 };
 
-export const updateCategoryStats = (category, attempted, correct) => {
+export const updateCategoryStats = (category, attempted, correct, timeTaken = 0) => {
   const stats = getCategoryStats();
   if (!stats[category]) {
-    stats[category] = { attempted: 0, correct: 0 };
+    stats[category] = { attempted: 0, correct: 0, totalTime: 0 };
   }
   stats[category].attempted += attempted;
   stats[category].correct += correct;
+  stats[category].totalTime = (stats[category].totalTime || 0) + timeTaken;
   setVal(KEYS.CATEGORY_STATS, stats);
 };
 
@@ -200,5 +228,7 @@ export default {
   getQuizHistory,
   getCategoryStats,
   updateCategoryStats,
+  getDailyActiveTime,
+  recordActiveMinutes,
   resetAllData,
 };

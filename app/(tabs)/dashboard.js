@@ -1,30 +1,132 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { CATEGORIES } from '../../src/engine/MathEngine';
-import { getTotalSolved, getHighScores, getQuizHistory, getCategoryStats } from '../../src/storage/storage';
+import { getTotalSolved, getStreak, getQuizHistory, getCategoryStats, getDailyActiveTime } from '../../src/storage/storage';
 import { useTheme } from '../../src/theme';
 
 export default function Dashboard() {
   const theme = useTheme();
   const [totalSolved, setTotalSolved] = useState(0);
-  const [highScores, setHighScores] = useState({});
+  const [streakData, setStreakData] = useState({ count: 0, max: 0, lastDate: null });
   const [recentQuizzes, setRecentQuizzes] = useState([]);
   const [categoryStats, setCategoryStats] = useState({});
+  const [activeTimes, setActiveTimes] = useState({});
+  
+  // For Monthly Calendar Heatmap
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDayMinutes, setSelectedDayMinutes] = useState(null);
 
   useFocusEffect(useCallback(() => {
     setTotalSolved(getTotalSolved());
-    setHighScores(getHighScores());
+    setStreakData(getStreak());
     setRecentQuizzes(getQuizHistory().slice(0, 5));
     setCategoryStats(getCategoryStats());
+    setActiveTimes(getDailyActiveTime());
   }, []));
+
+  // Generate Calendar Days for currentMonth
+  const generateMonthDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 (Sun) to 6 (Sat)
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const days = [];
+    // Empty slots for alignment
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
+    // Actual days
+    for (let i = 1; i <= daysInMonth; i++) {
+      const mStr = String(month + 1).padStart(2, '0');
+      const dStr = String(i).padStart(2, '0');
+      const fullDateStr = `${year}-${mStr}-${dStr}`;
+      days.push({
+        date: fullDateStr,
+        dayNum: i,
+        minutes: activeTimes[fullDateStr] || 0
+      });
+    }
+    return days;
+  };
+  
+  const calendarDays = generateMonthDays();
+  const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    setSelectedDayMinutes(null);
+  };
+  
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    setSelectedDayMinutes(null);
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.text }]}>Dashboard</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Your performance metrics</Text>
+      </View>
+
+      {/* Monthly Activity Heatmap */}
+      <View style={styles.section}>
+        <View style={styles.heatmapContainer}>
+          <View style={styles.heatmapHeader}>
+            <TouchableOpacity onPress={prevMonth} style={styles.monthNav}>
+              <Feather name="chevron-left" size={20} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={[styles.monthText, { color: theme.text }]}>{monthName}</Text>
+            <TouchableOpacity onPress={nextMonth} style={styles.monthNav}>
+              <Feather name="chevron-right" size={20} color={theme.text} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.calendarGrid}>
+            {['S','M','T','W','T','F','S'].map((day, i) => (
+              <Text key={`header-${i}`} style={[styles.dayHeader, { color: theme.textSecondary }]}>{day}</Text>
+            ))}
+            
+            {calendarDays.map((dayObj, i) => {
+              if (!dayObj) return <View key={`empty-${i}`} style={styles.calendarCell} />;
+              
+              let opacity = 0.1;
+              if (dayObj.minutes >= 15) opacity = 1;
+              else if (dayObj.minutes >= 10) opacity = 0.7;
+              else if (dayObj.minutes >= 5) opacity = 0.4;
+              else if (dayObj.minutes > 0) opacity = 0.2;
+              
+              const isSelected = selectedDayMinutes?.date === dayObj.date;
+
+              return (
+                <TouchableOpacity 
+                  key={dayObj.date} 
+                  style={styles.calendarCell}
+                  onPress={() => setSelectedDayMinutes(dayObj)}
+                >
+                  <View style={[
+                    styles.heatmapBlock, 
+                    { 
+                      backgroundColor: dayObj.minutes > 0 ? theme.primary : theme.border,
+                      opacity: dayObj.minutes > 0 ? opacity : 0.5,
+                      borderWidth: isSelected ? 2 : 0,
+                      borderColor: theme.text
+                    }
+                  ]} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          
+          {selectedDayMinutes && (
+            <Text style={[styles.selectedDayText, { color: theme.text }]}>
+              {selectedDayMinutes.date}: {Math.round(selectedDayMinutes.minutes)} mins active
+            </Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.metricRow}>
@@ -38,12 +140,14 @@ export default function Dashboard() {
 
         <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={[styles.iconBg, { backgroundColor: theme.warningLight }]}>
-            <Feather name="award" size={24} color={theme.warning} />
+            <Feather name="zap" size={24} color={theme.warning} />
           </View>
-          <Text style={[styles.metricValue, { color: theme.text }]}>{Object.keys(highScores).length}</Text>
-          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Records Set</Text>
+          <Text style={[styles.metricValue, { color: theme.text }]}>{streakData.max || 0}</Text>
+          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Max Streak</Text>
         </View>
       </View>
+
+
 
       {/* Category Mastery Chart */}
       {Object.keys(categoryStats).length > 0 && (
@@ -100,12 +204,13 @@ export default function Dashboard() {
       {Object.keys(categoryStats).length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Category Breakdown</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Weakness Analytics</Text>
           </View>
           <View style={[styles.listContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             {Object.entries(categoryStats).map(([catKey, stats], i) => {
               const catInfo = CATEGORIES.find((c) => c.key === catKey);
               const pct = stats.attempted > 0 ? Math.round((stats.correct / stats.attempted) * 100) : 0;
+              const avgSpeed = stats.attempted > 0 ? (stats.totalTime / stats.attempted).toFixed(1) : '0.0';
               const isLast = i === Object.keys(categoryStats).length - 1;
               return (
                 <View key={i} style={[styles.listItem, !isLast && { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
@@ -114,7 +219,7 @@ export default function Dashboard() {
                   </View>
                   <View style={styles.listInfo}>
                     <Text style={[styles.listCategory, { color: theme.text }]}>{catInfo?.label || catKey}</Text>
-                    <Text style={[styles.listMeta, { color: theme.textSecondary }]}>{stats.correct} / {stats.attempted} Correct</Text>
+                    <Text style={[styles.listMeta, { color: theme.textSecondary }]}>{avgSpeed}s / question</Text>
                   </View>
                   <Text style={[styles.listPct, { color: pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger }]}>{pct}%</Text>
                 </View>
@@ -158,6 +263,16 @@ const styles = StyleSheet.create({
   chartPctText: { fontSize: 10, fontWeight: '600', marginBottom: 6 },
   mathIconSmall: { fontSize: 14, fontWeight: '800' },
   mathIconMedium: { fontSize: 18, fontWeight: '800' },
+
+  heatmapContainer: { borderRadius: 20, paddingVertical: 12 },
+  heatmapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 8 },
+  monthText: { fontSize: 18, fontWeight: '700' },
+  monthNav: { padding: 4 },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  dayHeader: { width: '13%', textAlign: 'center', fontSize: 12, fontWeight: '600', marginBottom: 8 },
+  calendarCell: { width: '13%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  heatmapBlock: { width: 24, height: 24, borderRadius: 6 },
+  selectedDayText: { textAlign: 'center', marginTop: 12, fontSize: 14, fontWeight: '600' },
 
   listContainer: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
   listItem: { flexDirection: 'row', alignItems: 'center', padding: 16 },

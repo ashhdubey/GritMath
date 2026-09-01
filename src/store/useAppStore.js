@@ -144,17 +144,7 @@ const useAppStore = create((set, get) => ({
     let isFinished = nextIndex >= quiz.questions.length;
 
     if (isFinished) {
-      // Persist results
-      addToTotalSolved(quiz.questions.length);
-      updateHighScore(quizConfig.category, newScore, quiz.questions.length);
-      updateCategoryStats(quizConfig.category, quiz.questions.length, newScore);
-      saveQuizSession({
-        category: quizConfig.category,
-        score: newScore,
-        total: quiz.questions.length,
-        difficulty: quizConfig.difficulty,
-        answers: newAnswers,
-      });
+      get().saveQuizStats(quizConfig, quiz.questions.length, newScore, newAnswers);
     } else if (quizConfig.isInfinite) {
       // If infinite mode and not at limit, generate and push another question
       if (!quizConfig.infiniteLimit || nextIndex < quizConfig.infiniteLimit) {
@@ -173,6 +163,27 @@ const useAppStore = create((set, get) => ({
         isFinished,
         timeRemaining: isFinished ? 0 : quizConfig.timePerQuestion,
       },
+    });
+  },
+
+  /**
+   * Extracted persistence logic to allow saving stats for infinite mode when quitting.
+   */
+  saveQuizStats: (config, totalQuestions, score, answers) => {
+    if (totalQuestions === 0) return;
+    
+    // Calculate total time taken across all answered questions
+    const totalTime = answers.reduce((sum, ans) => sum + (ans.timeTaken || 0), 0);
+    
+    addToTotalSolved(totalQuestions);
+    updateHighScore(config.category, score, totalQuestions);
+    updateCategoryStats(config.category, totalQuestions, score, totalTime);
+    saveQuizSession({
+      category: config.category,
+      score,
+      total: totalQuestions,
+      difficulty: config.difficulty,
+      answers,
     });
   },
 
@@ -209,6 +220,18 @@ const useAppStore = create((set, get) => ({
         inputMode: state.quiz.inputMode === 'mcq' ? 'numpad' : 'mcq',
       },
     })),
+
+  /**
+   * Specifically for Infinite Mode to manually trigger saving before quitting.
+   */
+  manuallyFinishQuiz: () => {
+    const { quiz, quizConfig, saveQuizStats } = get();
+    // Only save if they actually answered something
+    if (quiz.answers.length > 0) {
+      saveQuizStats(quizConfig, quiz.answers.length, quiz.score, quiz.answers);
+    }
+    set({ quiz: { ...quiz, isFinished: true } });
+  },
 
   /**
    * End the quiz and reset to initial state.

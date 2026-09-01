@@ -74,7 +74,7 @@ const QuestionSlide = ({ question, index, currentIndex, onAnswer, timerWidth, ti
 export default function InfiniteQuiz() {
   const router = useRouter();
   const theme = useTheme();
-  const { quiz, submitAnswer, tickTimer, timeUp, endQuiz, quizConfig } = useAppStore();
+  const { quiz, submitAnswer, tickTimer, timeUp, endQuiz, manuallyFinishQuiz, quizConfig } = useAppStore();
   const flatListRef = useRef(null);
   const timerWidth = useRef(new Animated.Value(1)).current;
 
@@ -131,7 +131,13 @@ export default function InfiniteQuiz() {
         <Text style={[styles.counter, { color: theme.textSecondary }]}>
           Q {quiz.currentIndex + 1} {quizConfig.infiniteLimit ? `/ ${quizConfig.infiniteLimit}` : ' (Infinite)'}
         </Text>
-        <TouchableOpacity onPress={() => { endQuiz(); router.replace('/home'); }} style={styles.closeBtn}>
+        <TouchableOpacity 
+          onPress={() => { 
+            manuallyFinishQuiz(); 
+            // the useEffect will automatically route to results!
+          }} 
+          style={styles.closeBtn}
+        >
           <Feather name="x" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
