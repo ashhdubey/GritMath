@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Animated,
 } from 'react-native';
@@ -13,7 +13,8 @@ const CARD_GAP = 12;
 const CARD_WIDTH = (width - 48 - CARD_GAP) / 2;
 
 const CategoryCard = ({ item, onPress, theme }) => {
-  const scaleAnim = new Animated.Value(1);
+  // BUG-13 FIX: Use useRef so the Animated.Value is not recreated on every render
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 50 }).start();
   const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 50 }).start();
 
@@ -64,8 +65,18 @@ export default function Home() {
             <Feather name="zap" size={20} color={theme.warning} />
           </View>
           <View>
-            <Text style={[styles.statValue, { color: theme.text }]}>{streak.count} Days</Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Current Streak</Text>
+            {streak.count > 0 ? (
+              <>
+                <Text style={[styles.statValue, { color: theme.text }]}>{streak.count} Days 🔥</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Current Streak</Text>
+              </>
+            ) : (
+              // BUG-19 FIX: Show encouraging message for new users instead of "0 Days"
+              <>
+                <Text style={[styles.statValue, { color: theme.primary }]}>Start your streak!</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Complete a quiz to begin 🚀</Text>
+              </>
+            )}
           </View>
         </View>
       </View>

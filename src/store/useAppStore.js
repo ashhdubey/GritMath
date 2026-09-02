@@ -48,7 +48,6 @@ const INITIAL_QUIZ_STATE = {
   answers: [],          // { questionId, userAnswer, correct, timeTaken }
   timeRemaining: 0,
   isFinished: false,
-  inputMode: 'mcq',     // 'mcq' | 'numpad'
 };
 
 // ──────────────────── Store ──────────────────────────────
@@ -104,7 +103,6 @@ const useAppStore = create((set, get) => ({
         answers: [],
         timeRemaining: quizConfig.timePerQuestion,
         isFinished: false,
-        inputMode: get().quiz.inputMode, // preserve user's mode choice
       },
     });
 
@@ -114,6 +112,7 @@ const useAppStore = create((set, get) => ({
 
   /**
    * Submit an answer for the current question.
+   * BUG-01 FIX: No longer mutates state directly. Uses immutable spread.
    */
   submitAnswer: (userAnswer, timeTaken) => {
     const { quiz, quizConfig } = get();
@@ -142,21 +141,26 @@ const useAppStore = create((set, get) => ({
 
     const nextIndex = quiz.currentIndex + 1;
     let isFinished = nextIndex >= quiz.questions.length;
+    // BUG-01 FIX: build new questions array immutably
+    let newQuestions = quiz.questions;
+
+    if (!isFinished && quizConfig.isInfinite) {
+      // If infinite mode and not at limit, generate and append another question immutably
+      if (!quizConfig.infiniteLimit || nextIndex < quizConfig.infiniteLimit) {
+        const nextQ = generateQuestion(quizConfig.category, quizConfig.difficulty, quizConfig.customRange);
+        newQuestions = [...quiz.questions, nextQ]; // ← immutable spread, not .push()
+        isFinished = false;
+      }
+    }
 
     if (isFinished) {
       get().saveQuizStats(quizConfig, quiz.questions.length, newScore, newAnswers);
-    } else if (quizConfig.isInfinite) {
-      // If infinite mode and not at limit, generate and push another question
-      if (!quizConfig.infiniteLimit || nextIndex < quizConfig.infiniteLimit) {
-        const nextQ = generateQuestion(quizConfig.category, quizConfig.difficulty, quizConfig.customRange);
-        quiz.questions.push(nextQ);
-        isFinished = false;
-      }
     }
 
     set({
       quiz: {
         ...quiz,
+        questions: newQuestions,
         score: newScore,
         answers: newAnswers,
         currentIndex: isFinished ? quiz.currentIndex : nextIndex,
@@ -211,17 +215,6 @@ const useAppStore = create((set, get) => ({
   },
 
   /**
-   * Toggle input mode between 'mcq' and 'numpad'.
-   */
-  toggleInputMode: () =>
-    set((state) => ({
-      quiz: {
-        ...state.quiz,
-        inputMode: state.quiz.inputMode === 'mcq' ? 'numpad' : 'mcq',
-      },
-    })),
-
-  /**
    * Specifically for Infinite Mode to manually trigger saving before quitting.
    */
   manuallyFinishQuiz: () => {
@@ -235,8 +228,20 @@ const useAppStore = create((set, get) => ({
 
   /**
    * End the quiz and reset to initial state.
+   * BUG-20 FIX: Also resets Zustand in-memory preferences from storage.
    */
   endQuiz: () => set({ quiz: { ...INITIAL_QUIZ_STATE } }),
+
+  /**
+   * BUG-20 FIX: Full reset including Zustand in-memory state.
+   * Called after resetAllData() to sync the store.
+   */
+  resetStorePreferences: () => set({
+    accentColor: DEFAULT_ACCENT,
+    themePreference: 'system',
+    quizConfig: { ...DEFAULT_QUIZ_CONFIG },
+    quiz: { ...INITIAL_QUIZ_STATE },
+  }),
 }));
 
 export default useAppStore;

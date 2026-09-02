@@ -15,11 +15,17 @@ export default function Revision() {
   const [fromVal, setFromVal] = useState('2');
   const [toVal, setToVal] = useState('10');
   const [generatedList, setGeneratedList] = useState([]);
+  const [generateError, setGenerateError] = useState('');
 
   const handleGenerate = () => {
     const from = parseInt(fromVal, 10);
     const to = parseInt(toVal, 10);
-    if (isNaN(from) || isNaN(to) || from > to) return;
+    // BUG-15 FIX: Show error instead of silently failing
+    if (isNaN(from) || isNaN(to) || from > to || from < 1) {
+      setGenerateError('From must be ≤ To and both must be positive numbers.');
+      return;
+    }
+    setGenerateError('');
 
     const results = [];
     for (let i = from; i <= to; i++) {
@@ -156,6 +162,9 @@ export default function Revision() {
             <TouchableOpacity style={[styles.generateBtn, { backgroundColor: theme.primary }]} onPress={handleGenerate}>
               <Text style={styles.generateText}>Generate</Text>
             </TouchableOpacity>
+            {generateError ? (
+              <Text style={{ color: theme.danger || '#EF4444', fontSize: 13, marginTop: 8, fontWeight: '600' }}>⚠ {generateError}</Text>
+            ) : null}
 
             <View style={styles.resultsArea}>
               {generatedList.map((res) => (

@@ -21,14 +21,29 @@ export default function Results() {
 
   const scoreColor = pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger;
 
-  const handleRetry = () => { endQuiz(); startQuiz(); router.replace('/quiz'); };
+  // BUG-09 FIX: Route to the correct screen based on quiz mode
+  const handleRetry = () => {
+    endQuiz();
+    startQuiz();
+    if (quizConfig.isInfinite) {
+      router.replace('/infinite-quiz');
+    } else {
+      router.replace('/quiz');
+    }
+  };
   const handleHome = () => { endQuiz(); router.replace('/home'); };
+
+  // BUG-11 FIX: Show a friendly category label even when category is an array
+  const getCategoryLabel = () => {
+    if (Array.isArray(quizConfig.category)) return 'Mixed';
+    return catInfo.label;
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Quiz Complete!</Text>
-        <Text style={[styles.headerSub, { color: theme.textSecondary }]}>{catInfo.label} • {quizConfig.difficulty}</Text>
+        <Text style={[styles.headerSub, { color: theme.textSecondary }]}>{getCategoryLabel()} • {quizConfig.difficulty}</Text>
       </View>
 
       {/* Score Circle */}
@@ -59,6 +74,7 @@ export default function Results() {
       <Text style={[styles.reviewTitle, { color: theme.text }]}>Review</Text>
       {quiz.answers.map((ans, i) => {
         const q = quiz.questions[i];
+        if (!q) return null; // BUG-03 FIX: Guard against undefined question
         const itemColor = ans.correct ? theme.success : theme.danger;
         return (
           <View key={i} style={[styles.reviewItem, { backgroundColor: theme.surface, borderLeftColor: itemColor, borderColor: theme.border }]}>
@@ -82,7 +98,7 @@ export default function Results() {
           <Text style={styles.btnText}>Retry Same Quiz</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.homeBtn, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={handleHome}>
-          <Text style={[styles.btnText, { color: theme.textSecondary }]}>Back to Dashboard</Text>
+          <Text style={[styles.btnText, { color: theme.textSecondary }]}>Back to Home</Text>
         </TouchableOpacity>
       </View>
       <View style={{ height: 50 }} />

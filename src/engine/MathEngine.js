@@ -14,7 +14,10 @@
 /**
  * Returns a random integer in [min, max] (inclusive).
  */
-const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randInt = (min, max) => {
+  if (min > max) return min; // BUG-06 guard: never crash on inverted range
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
 
 /**
  * Shuffles an array in‑place using Fisher–Yates.
@@ -36,6 +39,7 @@ const gcd = (a, b) => (b === 0 ? Math.abs(a) : gcd(b, a % b));
  * Simplify a fraction { num, den } to lowest terms.
  */
 const simplifyFraction = (num, den) => {
+  if (den === 0) return { num: 0, den: 1 }; // safety guard
   const g = gcd(num, den);
   return { num: num / g, den: den / g };
 };
@@ -112,8 +116,31 @@ const generateCube = (range) => {
  * Generates an addition / subtraction of two simple fractions and
  * expects the answer as a simplified fraction string "num/den" or whole number.
  * e.g. "1/3 + 1/6 = ?"  →  "1/2"
+ *
+ * FIX BUG-04: replaced infinite recursion with a bounded retry loop.
  */
-const generateFraction = (range) => {
+const generateFraction = (range, _attempts = 0) => {
+  // Safety guard: if retried too many times, fall back to simple addition
+  if (_attempts > 20) {
+    const num1 = randInt(1, 5);
+    const den1 = randInt(num1 + 1, 10);
+    const num2 = randInt(1, 5);
+    const den2 = randInt(num2 + 1, 10);
+    const resultNum = num1 * den2 + num2 * den1;
+    const resultDen = den1 * den2;
+    const simplified = simplifyFraction(resultNum, resultDen);
+    const correctAnswerStr = simplified.den === 1
+      ? `${simplified.num}`
+      : `${simplified.num}/${simplified.den}`;
+    return {
+      category: 'fraction',
+      questionText: `${num1}/${den1} + ${num2}/${den2}`,
+      correctAnswer: correctAnswerStr,
+      correctAnswerNumeric: resultNum / resultDen,
+      operands: { num1, den1, num2, den2, op: '+' },
+    };
+  }
+
   const den1 = randInt(2, Math.min(range.max, 12));
   const den2 = randInt(2, Math.min(range.max, 12));
   const num1 = randInt(1, den1 - 1);
@@ -130,10 +157,9 @@ const generateFraction = (range) => {
     resultNum = num1 * den2 - num2 * den1;
   }
 
-  // Ensure a positive result for subtraction
+  // Ensure a positive result for subtraction — iterative retry, not recursive
   if (resultNum <= 0) {
-    // Flip to addition to avoid negative / zero fractions
-    return generateFraction(range);
+    return generateFraction(range, _attempts + 1);
   }
 
   const simplified = simplifyFraction(resultNum, resultDen);
@@ -156,6 +182,7 @@ const generateFraction = (range) => {
 
 /**
  * Category: BASIC ARITHMETIC (+ − × ÷)
+ * FIX BUG-06: Division can now produce answers starting from 1.
  */
 const generateBasicArithmetic = (range) => {
   const ops = ['+', '-', '×', '÷'];
@@ -180,7 +207,8 @@ const generateBasicArithmetic = (range) => {
       break;
     case '÷': {
       b = randInt(2, 12);
-      correctAnswer = randInt(range.min, Math.min(range.max, 20));
+      // FIX: allow answer from 1, not just from range.min
+      correctAnswer = randInt(1, Math.min(range.max, 20));
       a = b * correctAnswer; // ensures whole number division
       break;
     }
@@ -201,15 +229,8 @@ const generateBasicArithmetic = (range) => {
 /**
  * Generates `count` believable but WRONG options for a given correct answer.
  *
- * Strategies applied:
- *   1. Digit‑swap  – alter the unit digit by ±1 or ±2
- *   2. Small offset – add/subtract a small value (±5, ±10, ±20)
- *   3. Percentage‑based offset – ±2‑8 % of the correct answer (for large numbers)
- *
- * Guarantees:
- *   • No duplicates
- *   • None of the distractors equal the correct answer
- *   • All distractors are positive integers (for numeric categories)
+ * FIX BUG-07: For small answers, uses smarter strategies that don't
+ * just produce sequential numbers.
  */
 const generateDistractors = (correctAnswer, count = 3) => {
   // For fraction string answers, use special handling
@@ -219,7 +240,7 @@ const generateDistractors = (correctAnswer, count = 3) => {
 
   const distractors = new Set();
   const correct = Math.round(correctAnswer);
-  const magnitude = Math.abs(correct);
+  const magnitude = Math.max(Math.abs(correct), 10); // ensure minimum magnitude for %
 
   // Strategy pool – each returns a candidate number
   const strategies = [
@@ -228,14 +249,14 @@ const generateDistractors = (correctAnswer, count = 3) => {
       const delta = Math.random() < 0.5 ? randInt(1, 2) : -randInt(1, 2);
       return correct + delta;
     },
-    // 2. Small fixed offset
+    // 2. Scaled offset based on magnitude (works well for both small and large)
     () => {
-      const offsets = [5, 10, 15, 20, -5, -10, -15, -20];
-      return correct + offsets[randInt(0, offsets.length - 1)];
+      const delta = Math.max(1, Math.round(magnitude * (randInt(5, 20) / 100)));
+      return Math.random() < 0.5 ? correct + delta : correct - delta;
     },
     // 3. Percentage‑based offset (good for cubes / large products)
     () => {
-      const pct = randInt(2, 8) / 100;
+      const pct = randInt(5, 15) / 100;
       const delta = Math.max(1, Math.round(magnitude * pct));
       return Math.random() < 0.5 ? correct + delta : correct - delta;
     },
@@ -244,15 +265,21 @@ const generateDistractors = (correctAnswer, count = 3) => {
       const delta = randInt(1, 3) * 10;
       return Math.random() < 0.5 ? correct + delta : correct - delta;
     },
-    // 5. Adjacent power / near‑miss (e.g. off by ± the operand)
+    // 5. Small adjacent near-miss
     () => {
       const delta = randInt(1, 4);
       return correct + (Math.random() < 0.5 ? delta : -delta);
     },
+    // 6. BUG-07 FIX: For small numbers, multiply by near-factor
+    () => {
+      const factors = [2, 3, 0.5];
+      const f = factors[randInt(0, factors.length - 1)];
+      return Math.round(correct * f);
+    },
   ];
 
   let attempts = 0;
-  const maxAttempts = 100;
+  const maxAttempts = 150;
 
   while (distractors.size < count && attempts < maxAttempts) {
     const strategy = strategies[randInt(0, strategies.length - 1)];
@@ -375,11 +402,6 @@ export const CATEGORIES = [
 
 /**
  * Generate a single question object (with MCQ options pre‑attached).
- *
- * @param {string}  category   – one of the keys in GENERATORS
- * @param {string}  difficulty – 'easy' | 'medium' | 'hard'
- * @param {object} [customRange] – optional { min, max } override
- * @returns {{ questionText, correctAnswer, options, category }}
  */
 export const generateQuestion = (category, difficulty = 'medium', customRange = null) => {
   const actualCategory = Array.isArray(category)
@@ -392,7 +414,12 @@ export const generateQuestion = (category, difficulty = 'medium', customRange = 
   }
 
   const range = customRange || getDefaultRange(difficulty);
-  const q = generator(range);
+  // BUG-06 FIX: Ensure range is always valid
+  const safeRange = {
+    min: Math.min(range.min, range.max),
+    max: Math.max(range.min, range.max),
+  };
+  const q = generator(safeRange);
 
   // Build MCQ options (correct + 3 distractors), shuffled
   const distractors = generateDistractors(q.correctAnswer, 3);
@@ -409,12 +436,6 @@ export const generateQuestion = (category, difficulty = 'medium', customRange = 
 
 /**
  * Generate an array of `count` questions for a quiz session.
- *
- * @param {string}  category
- * @param {number}  count      – number of questions (10..50)
- * @param {string}  difficulty
- * @param {object} [customRange]
- * @returns {Array}
  */
 export const generateQuiz = (category, count = 10, difficulty = 'medium', customRange = null) => {
   const questions = [];

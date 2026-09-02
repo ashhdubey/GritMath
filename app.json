@@ -2,7 +2,7 @@
   "expo": {
     "name": "GritMath",
     "slug": "gritmath",
-    "version": "1.8.5",
+    "version": "1.8.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

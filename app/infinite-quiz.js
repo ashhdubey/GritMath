@@ -12,6 +12,13 @@ const QuestionSlide = ({ question, index, currentIndex, onAnswer, timerWidth, ti
   const [localFeedback, setLocalFeedback] = useState(null);
   const isActive = index === currentIndex;
 
+  // BUG-08 FIX: Reset local feedback when this slide becomes the active one
+  useEffect(() => {
+    if (isActive) {
+      setLocalFeedback(null);
+    }
+  }, [isActive]);
+
   const handlePress = (opt) => {
     if (localFeedback || !isActive) return;
     const isCorrect = String(opt) === String(question.correctAnswer);
@@ -74,7 +81,7 @@ const QuestionSlide = ({ question, index, currentIndex, onAnswer, timerWidth, ti
 export default function InfiniteQuiz() {
   const router = useRouter();
   const theme = useTheme();
-  const { quiz, submitAnswer, tickTimer, timeUp, endQuiz, manuallyFinishQuiz, quizConfig } = useAppStore();
+  const { quiz, submitAnswer, tickTimer, timeUp, manuallyFinishQuiz, quizConfig } = useAppStore();
   const flatListRef = useRef(null);
   const timerWidth = useRef(new Animated.Value(1)).current;
 
@@ -107,11 +114,15 @@ export default function InfiniteQuiz() {
     const timeTaken = quizConfig.timePerQuestion - quiz.timeRemaining;
     submitAnswer(userAns, timeTaken);
     
-    if (!quiz.isFinished) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: quiz.currentIndex + 1, animated: true });
-      }, 100);
-    }
+    // BUG-02 FIX: Read updated index directly from store after submitAnswer
+    setTimeout(() => {
+      const updatedIndex = useAppStore.getState().quiz.currentIndex;
+      if (!useAppStore.getState().quiz.isFinished) {
+        flatListRef.current?.scrollToIndex({ index: updatedIndex, animated: true });
+        // BUG-08 FIX: Reset the timer bar to full when scrolling to a new question
+        timerWidth.setValue(1);
+      }
+    }, 100);
   };
 
   if (!quiz.isActive || !quiz.questions.length) {

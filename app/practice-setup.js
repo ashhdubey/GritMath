@@ -22,8 +22,19 @@ export default function PracticeSetup() {
   const [customMin, setCustomMin] = useState('2');
   const [customMax, setCustomMax] = useState('25');
   const [timePerQ, setTimePerQ] = useState(15);
+  const [rangeError, setRangeError] = useState('');
 
   const handleStart = () => {
+    // BUG-14 FIX: Validate custom range before starting
+    if (rangeMode === 'specific') {
+      const mn = parseInt(customMin, 10);
+      const mx = parseInt(customMax, 10);
+      if (isNaN(mn) || isNaN(mx) || mn >= mx || mn < 1) {
+        setRangeError('Min must be less than Max and both must be positive.');
+        return;
+      }
+    }
+    setRangeError('');
     const customRange = rangeMode === 'specific'
       ? { min: parseInt(customMin, 10) || 2, max: parseInt(customMax, 10) || 25 }
       : null;
@@ -99,6 +110,12 @@ export default function PracticeSetup() {
           </View>
         </View>
       )}
+
+      {rangeMode === 'specific' && rangeError ? (
+        <Text style={{ color: theme.danger || '#EF4444', fontSize: 13, marginTop: 8, fontWeight: '600' }}>
+          ⚠ {rangeError}
+        </Text>
+      ) : null}
 
       <TouchableOpacity style={[styles.startBtn, { backgroundColor: theme.primary }]} onPress={handleStart} activeOpacity={0.8}>
         <Text style={styles.startText}>Start Quiz</Text>

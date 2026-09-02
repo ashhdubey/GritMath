@@ -5,6 +5,7 @@ import { View, Animated, StyleSheet, Text, useColorScheme, Modal, TouchableOpaci
 import { Feather } from '@expo/vector-icons';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { loadStorage, recordActiveMinutes } from '../src/storage/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../src/theme';
 
 // Keep the native splash screen visible until we're ready
@@ -97,15 +98,20 @@ function MainApp() {
         const res = await fetch('https://api.github.com/repos/ashhdubey/GritMath/releases/latest');
         if (!res.ok) return;
         const data = await res.json();
-        const currentVersion = require('../package.json').version;
-        const latestV = data.tag_name.replace('v', '');
+        const currentVersion = require('../package.json').version.trim();
+        const latestV = data.tag_name.replace('v', '').trim();
         
         // Proper semver comparison: only show if GitHub version is strictly greater
         const isNewer = latestV.localeCompare(currentVersion, undefined, { numeric: true, sensitivity: 'base' }) > 0;
         
-        if (isNewer) {
-          setUpdateInfo(data);
-        }
+        if (!isNewer) return; // Not a new version, skip
+
+        // UPDATE NOTIFICATION FIX: Check if user already dismissed this exact version
+        // This prevents showing the popup again right after installing an update
+        const dismissed = await AsyncStorage.getItem('dismissedUpdateVersion').catch(() => null);
+        if (dismissed === latestV) return;
+
+        setUpdateInfo(data);
       } catch (e) {
         // Silently fail if offline or API error
       }
@@ -138,7 +144,12 @@ function MainApp() {
                 Version {updateInfo.tag_name} is ready to download!
               </Text>
               <View style={styles.modalActions}>
-                <TouchableOpacity style={[styles.modalBtnLater, { borderColor: theme.border }]} onPress={() => setUpdateInfo(null)}>
+                <TouchableOpacity style={[styles.modalBtnLater, { borderColor: theme.border }]} onPress={async () => {
+                  // Save dismissed version so we don't prompt for the same release again
+                  const latestV = updateInfo.tag_name.replace('v', '').trim();
+                  await AsyncStorage.setItem('dismissedUpdateVersion', latestV).catch(() => {});
+                  setUpdateInfo(null);
+                }}>
                   <Text style={[styles.modalBtnLaterText, { color: theme.textSecondary }]}>Later</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 

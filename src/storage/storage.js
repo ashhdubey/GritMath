@@ -67,6 +67,17 @@ const setVal = (key, value) => {
   AsyncStorage.setItem(key, JSON.stringify(value)).catch(() => {});
 };
 
+/**
+ * BUG-05 FIX: Returns local-timezone date string YYYY-MM-DD.
+ * toISOString() always uses UTC which causes wrong dates in IST (UTC+5:30).
+ */
+const toLocalDateString = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 // ──────────────────── High Scores ────────────────────────
 
 export const getHighScores = () => {
@@ -94,19 +105,18 @@ export const updateHighScore = (category, score, total) => {
 
 // ──────────────────── Daily Streak ───────────────────────
 
-const toDateString = (date) => date.toISOString().slice(0, 10);
-
 export const getStreak = () => getVal(KEYS.DAILY_STREAK, { count: 0, max: 0, lastDate: null });
 
 export const recordPracticeDay = () => {
   const streak = getStreak();
-  const today = toDateString(new Date());
+  // BUG-05 FIX: use local timezone date, not UTC
+  const today = toLocalDateString(new Date());
 
   if (streak.lastDate === today) return streak;
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = toDateString(yesterday);
+  const yesterdayStr = toLocalDateString(yesterday);
 
   if (streak.lastDate === yesterdayStr) {
     streak.count += 1;
@@ -135,7 +145,8 @@ export const getDailyActiveTime = () => {
 export const recordActiveMinutes = (minutes) => {
   if (minutes <= 0) return;
   const times = getDailyActiveTime();
-  const today = toDateString(new Date());
+  // BUG-05 FIX: use local timezone date
+  const today = toLocalDateString(new Date());
   
   if (!times[today]) {
     times[today] = 0;
@@ -194,12 +205,14 @@ export const getCategoryStats = () => {
 
 export const updateCategoryStats = (category, attempted, correct, timeTaken = 0) => {
   const stats = getCategoryStats();
-  if (!stats[category]) {
-    stats[category] = { attempted: 0, correct: 0, totalTime: 0 };
+  // BUG-11 FIX: if category is an array (infinite mode), store under 'mixed' key
+  const key = Array.isArray(category) ? 'mixed' : category;
+  if (!stats[key]) {
+    stats[key] = { attempted: 0, correct: 0, totalTime: 0 };
   }
-  stats[category].attempted += attempted;
-  stats[category].correct += correct;
-  stats[category].totalTime = (stats[category].totalTime || 0) + timeTaken;
+  stats[key].attempted += attempted;
+  stats[key].correct += correct;
+  stats[key].totalTime = (stats[key].totalTime || 0) + timeTaken;
   setVal(KEYS.CATEGORY_STATS, stats);
 };
 

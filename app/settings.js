@@ -16,12 +16,17 @@ const THEMES = [
 export default function Settings() {
   const router = useRouter();
   const theme = useTheme();
-  const { accentColor, setAccentColor, themePreference, setThemePreference } = useAppStore();
+  const { accentColor, setAccentColor, themePreference, setThemePreference, resetStorePreferences } = useAppStore();
 
   const handleReset = () => {
     Alert.alert('Reset All Data', 'This will erase all your streaks, high scores, and quiz history. Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: () => { resetAllData(); router.replace('/'); } },
+      { text: 'Reset', style: 'destructive', onPress: () => {
+        // BUG-20 FIX: Reset both AsyncStorage and Zustand in-memory state
+        resetAllData();
+        resetStorePreferences();
+        router.replace('/');
+      }},
     ]);
   };
 

@@ -1,6 +1,6 @@
 {
   "name": "gritmath",
-  "version": "1.8.5",
+  "version": "1.8.8",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.14",

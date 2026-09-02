@@ -60,7 +60,12 @@ export default function Dashboard() {
     setSelectedDayMinutes(null);
   };
   
+  // BUG-17 FIX: Prevent navigating beyond the current month
+  const now = new Date();
+  const isCurrentMonth = currentMonth.getFullYear() === now.getFullYear() && currentMonth.getMonth() === now.getMonth();
+  
   const nextMonth = () => {
+    if (isCurrentMonth) return; // don't allow future months
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
     setSelectedDayMinutes(null);
   };
@@ -80,7 +85,7 @@ export default function Dashboard() {
               <Feather name="chevron-left" size={20} color={theme.text} />
             </TouchableOpacity>
             <Text style={[styles.monthText, { color: theme.text }]}>{monthName}</Text>
-            <TouchableOpacity onPress={nextMonth} style={styles.monthNav}>
+            <TouchableOpacity onPress={nextMonth} style={[styles.monthNav, isCurrentMonth && { opacity: 0.3 }]} disabled={isCurrentMonth}>
               <Feather name="chevron-right" size={20} color={theme.text} />
             </TouchableOpacity>
           </View>
@@ -121,11 +126,15 @@ export default function Dashboard() {
             })}
           </View>
           
-          {selectedDayMinutes && (
-            <Text style={[styles.selectedDayText, { color: theme.text }]}>
-              {selectedDayMinutes.date}: {Math.round(selectedDayMinutes.minutes)} mins active
-            </Text>
-          )}
+          {selectedDayMinutes && (() => {
+            const d = new Date(selectedDayMinutes.date + 'T00:00:00'); // local parse
+            const label = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
+            return (
+              <Text style={[styles.selectedDayText, { color: theme.text }]}>
+                {label} · {Math.round(selectedDayMinutes.minutes)} min{selectedDayMinutes.minutes !== 1 ? 's' : ''} active
+              </Text>
+            );
+          })()}
         </View>
       </View>
 
@@ -182,15 +191,19 @@ export default function Dashboard() {
           <View style={[styles.listContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             {recentQuizzes.map((quiz, i) => {
               const pct = Math.round((quiz.score / quiz.total) * 100);
-              const catInfo = CATEGORIES.find((c) => c.key === quiz.category);
+              // BUG-11 FIX: category can be an array in infinite mode
+              const catKey = Array.isArray(quiz.category) ? null : quiz.category;
+              const catInfo = catKey ? CATEGORIES.find((c) => c.key === catKey) : null;
+              const catLabel = catInfo ? catInfo.label : (Array.isArray(quiz.category) ? 'Mixed' : quiz.category);
+              const catIcon = catInfo ? catInfo.icon : '∞';
               const isLast = i === recentQuizzes.length - 1;
               return (
                 <View key={i} style={[styles.listItem, !isLast && { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
                   <View style={[styles.catIconBg, { backgroundColor: theme.background }]}>
-                    <Text style={[styles.mathIconMedium, { color: theme.primary }]}>{catInfo?.icon || '#'}</Text>
+                    <Text style={[styles.mathIconMedium, { color: theme.primary }]}>{catIcon}</Text>
                   </View>
                   <View style={styles.listInfo}>
-                    <Text style={[styles.listCategory, { color: theme.text }]}>{catInfo?.label || quiz.category}</Text>
+                    <Text style={[styles.listCategory, { color: theme.text }]}>{catLabel}</Text>
                     <Text style={[styles.listMeta, { color: theme.textSecondary }]}>{quiz.score}/{quiz.total} • {quiz.difficulty}</Text>
                   </View>
                   <Text style={[styles.listPct, { color: pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger }]}>{pct}%</Text>
@@ -204,7 +217,7 @@ export default function Dashboard() {
       {Object.keys(categoryStats).length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Weakness Analytics</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Speed Analytics</Text>
           </View>
           <View style={[styles.listContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             {Object.entries(categoryStats).map(([catKey, stats], i) => {
