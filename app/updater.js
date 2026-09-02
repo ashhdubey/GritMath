@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Dimensions, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
+import * as Application from 'expo-application';
 import { useTheme } from '../src/theme';
+import { compareSemVer } from '../src/utils';
 
 const { width } = Dimensions.get('window');
 
@@ -29,9 +31,9 @@ export default function Updater() {
       if (!res.ok) throw new Error('Failed to fetch update info');
       const data = await res.json();
       
-      const currentVersion = require('../package.json').version;
-      const latestV = data.tag_name.replace('v', '');
-      const isNewer = latestV.localeCompare(currentVersion, undefined, { numeric: true, sensitivity: 'base' }) > 0;
+      const currentVersion = Application.nativeApplicationVersion || require('../package.json').version;
+      const latestV = data.tag_name;
+      const isNewer = compareSemVer(latestV, currentVersion) > 0;
       
       setRelease({ ...data, isNewer });
     } catch (err) {
@@ -56,7 +58,9 @@ export default function Updater() {
     }
 
     try {
-      const fileUri = FileSystem.documentDirectory + apkAsset.name;
+      // Create a unique filename so we never accidentally open a corrupted/half-downloaded APK
+      const timestamp = Date.now();
+      const fileUri = FileSystem.documentDirectory + `GritMath-update-${timestamp}.apk`;
       
       const downloadResumable = FileSystem.createDownloadResumable(
         apkAsset.browser_download_url,
@@ -182,6 +186,19 @@ export default function Updater() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Manual Update Fallback - Fix for Android scoped storage bugs */}
+        {release.isNewer && (
+          <TouchableOpacity 
+            style={styles.manualFallbackBtn}
+            onPress={() => Linking.openURL(release.html_url)}
+          >
+            <Feather name="external-link" size={14} color={theme.textSecondary} />
+            <Text style={[styles.manualFallbackText, { color: theme.textSecondary }]}>
+              Install button not working? Tap here to download manually.
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -205,5 +222,7 @@ const styles = StyleSheet.create({
   updateText: { fontSize: 16, fontWeight: '700' },
   progressContainer: { marginBottom: 16 },
   progressBarBg: { height: 6, borderRadius: 3, width: '100%', overflow: 'hidden' },
-  progressBarFill: { height: '100%' }
+  progressBarFill: { height: '100%' },
+  manualFallbackBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20, gap: 6 },
+  manualFallbackText: { fontSize: 13, textDecorationLine: 'underline' }
 });

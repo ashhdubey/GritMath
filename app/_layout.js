@@ -6,7 +6,9 @@ import { Feather } from '@expo/vector-icons';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { loadStorage, recordActiveMinutes } from '../src/storage/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Application from 'expo-application';
 import { useTheme } from '../src/theme';
+import { compareSemVer } from '../src/utils';
 
 // Keep the native splash screen visible until we're ready
 ExpoSplashScreen.preventAutoHideAsync();
@@ -98,11 +100,13 @@ function MainApp() {
         const res = await fetch('https://api.github.com/repos/ashhdubey/GritMath/releases/latest');
         if (!res.ok) return;
         const data = await res.json();
-        const currentVersion = require('../package.json').version.trim();
-        const latestV = data.tag_name.replace('v', '').trim();
+        
+        // Use native app version to avoid JS cache issues
+        const currentVersion = Application.nativeApplicationVersion || require('../package.json').version;
+        const latestV = data.tag_name;
         
         // Proper semver comparison: only show if GitHub version is strictly greater
-        const isNewer = latestV.localeCompare(currentVersion, undefined, { numeric: true, sensitivity: 'base' }) > 0;
+        const isNewer = compareSemVer(latestV, currentVersion) > 0;
         
         if (!isNewer) return; // Not a new version, skip
 
