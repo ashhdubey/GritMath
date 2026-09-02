@@ -26,8 +26,8 @@ export default function About() {
       {/* App Section */}
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, marginBottom: 24 }]}>
         <View style={styles.headerRow}>
-          <View style={[styles.avatar, { backgroundColor: theme.primaryLight }]}>
-            <Feather name="hash" size={40} color={theme.primary} />
+          <View style={[styles.avatar, { backgroundColor: theme.primaryLight, overflow: 'hidden' }]}>
+            <Image source={require('../assets/icon.png')} style={{ width: '100%', height: '100%' }} />
           </View>
           
           <View style={styles.headerInfo}>
@@ -50,6 +50,7 @@ export default function About() {
       </View>
 
       {/* Developer Section */}
+      <Text style={[styles.title, { color: theme.text, marginTop: 12, marginBottom: 16, fontSize: 22 }]}>Connect with Developer</Text>
 
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.headerRow}>
