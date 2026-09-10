@@ -11,12 +11,26 @@
 
 // ──────────────────────── helpers ────────────────────────
 
+let currentSeed = null;
+
+export const setSeed = (seed) => { currentSeed = seed; };
+export const clearSeed = () => { currentSeed = null; };
+
+/**
+ * Basic Linear Congruential Generator for seeded random numbers.
+ */
+const seededRandom = () => {
+  if (currentSeed === null) return Math.random();
+  currentSeed = (currentSeed * 9301 + 49297) % 233280;
+  return currentSeed / 233280;
+};
+
 /**
  * Returns a random integer in [min, max] (inclusive).
  */
 const randInt = (min, max) => {
-  if (min > max) return min; // BUG-06 guard: never crash on inverted range
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  if (min > max) return min; // BUG-06 guard
+  return Math.floor(seededRandom() * (max - min + 1)) + min;
 };
 
 /**
@@ -82,11 +96,22 @@ const generateMultiplication = (range) => {
 };
 
 /**
- * Category: SQUARE
- * e.g. "What is 14²?"
+ * Category: SQUARE / SQUARE ROOT
+ * e.g. "What is 14²?" or "What is √196?"
  */
 const generateSquare = (range) => {
   const n = randInt(range.min, range.max);
+  const isRoot = seededRandom() < 0.5; // 50% chance for square root
+  
+  if (isRoot) {
+    return {
+      category: 'square',
+      questionText: `√${n * n}`,
+      correctAnswer: n,
+      operands: { n: n * n, root: true },
+    };
+  }
+  
   return {
     category: 'square',
     questionText: `${n}²`,
@@ -96,13 +121,23 @@ const generateSquare = (range) => {
 };
 
 /**
- * Category: CUBE
- * e.g. "What is 14³?"
+ * Category: CUBE / CUBE ROOT
+ * e.g. "What is 14³?" or "What is ³√2744?"
  */
 const generateCube = (range) => {
-  // Cubes grow fast – cap the range sensibly
   const cappedMax = Math.min(range.max, 30);
   const n = randInt(range.min, cappedMax);
+  const isRoot = seededRandom() < 0.5; // 50% chance for cube root
+  
+  if (isRoot) {
+    return {
+      category: 'cube',
+      questionText: `³√${n * n * n}`,
+      correctAnswer: n,
+      operands: { n: n * n * n, root: true },
+    };
+  }
+  
   return {
     category: 'cube',
     questionText: `${n}³`,
@@ -146,7 +181,7 @@ const generateFraction = (range, _attempts = 0) => {
   const num1 = randInt(1, den1 - 1);
   const num2 = randInt(1, den2 - 1);
 
-  const op = Math.random() < 0.5 ? '+' : '-';
+  const op = seededRandom() < 0.5 ? '+' : '-';
 
   let resultNum;
   const resultDen = den1 * den2;
@@ -224,6 +259,30 @@ const generateBasicArithmetic = (range) => {
   };
 };
 
+/**
+ * Category: PERCENTAGE
+ * e.g. "What is 20% of 50?"
+ */
+const generatePercentage = (range) => {
+  const nicePercentages = [10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90];
+  const p = nicePercentages[randInt(0, nicePercentages.length - 1)];
+  
+  const g = gcd(p, 100);
+  const den = 100 / g; 
+  const num = p / g;
+  
+  const ansMult = randInt(1, Math.max(10, range.max));
+  const correctAnswer = ansMult * num;
+  const base = ansMult * den;
+
+  return {
+    category: 'percentage',
+    questionText: `${p}% of ${base}`,
+    correctAnswer,
+    operands: { p, base },
+  };
+};
+
 // ─────────────── distractor generator ────────────────────
 
 /**
@@ -246,29 +305,29 @@ const generateDistractors = (correctAnswer, count = 3) => {
   const strategies = [
     // 1. Unit-digit alteration  (swap last digit by ±1 or ±2)
     () => {
-      const delta = Math.random() < 0.5 ? randInt(1, 2) : -randInt(1, 2);
+      const delta = seededRandom() < 0.5 ? randInt(1, 2) : -randInt(1, 2);
       return correct + delta;
     },
     // 2. Scaled offset based on magnitude (works well for both small and large)
     () => {
       const delta = Math.max(1, Math.round(magnitude * (randInt(5, 20) / 100)));
-      return Math.random() < 0.5 ? correct + delta : correct - delta;
+      return seededRandom() < 0.5 ? correct + delta : correct - delta;
     },
     // 3. Percentage‑based offset (good for cubes / large products)
     () => {
       const pct = randInt(5, 15) / 100;
       const delta = Math.max(1, Math.round(magnitude * pct));
-      return Math.random() < 0.5 ? correct + delta : correct - delta;
+      return seededRandom() < 0.5 ? correct + delta : correct - delta;
     },
     // 4. Tens‑digit alteration
     () => {
       const delta = randInt(1, 3) * 10;
-      return Math.random() < 0.5 ? correct + delta : correct - delta;
+      return seededRandom() < 0.5 ? correct + delta : correct - delta;
     },
     // 5. Small adjacent near-miss
     () => {
       const delta = randInt(1, 4);
-      return correct + (Math.random() < 0.5 ? delta : -delta);
+      return correct + (seededRandom() < 0.5 ? delta : -delta);
     },
     // 6. BUG-07 FIX: For small numbers, multiply by near-factor
     () => {
@@ -325,7 +384,7 @@ const generateFractionDistractors = (correctStr, count = 3) => {
   const strategies = [
     // Off‑by‑one on numerator
     () => {
-      const d = Math.random() < 0.5 ? 1 : -1;
+      const d = seededRandom() < 0.5 ? 1 : -1;
       const n = correctNum + d;
       if (n <= 0) return null;
       const s = simplifyFraction(n, correctDen);
@@ -333,7 +392,7 @@ const generateFractionDistractors = (correctStr, count = 3) => {
     },
     // Off‑by‑one on denominator
     () => {
-      const d = Math.random() < 0.5 ? 1 : -1;
+      const d = seededRandom() < 0.5 ? 1 : -1;
       const den = correctDen + d;
       if (den <= 0) return null;
       const s = simplifyFraction(correctNum, den);
@@ -387,6 +446,7 @@ const GENERATORS = {
   cube: generateCube,
   fraction: generateFraction,
   arithmetic: generateBasicArithmetic,
+  percentage: generatePercentage,
 };
 
 /**
@@ -396,14 +456,16 @@ export const CATEGORIES = [
   { key: 'square', label: 'Square', icon: 'x²', featherIcon: 'grid', color: '#0056D2' },
   { key: 'cube', label: 'Cube', icon: 'x³', featherIcon: 'box', color: '#10B981' },
   { key: 'multiplication', label: 'Table', icon: '×', featherIcon: 'x', color: '#F59E0B' },
+  { key: 'percentage', label: 'Percent', icon: '%', featherIcon: 'percent', color: '#14B8A6' },
   { key: 'arithmetic', label: 'Arithmetic', icon: '+-', featherIcon: 'activity', color: '#EF4444' },
   { key: 'fraction', label: 'Fraction', icon: 'a/b', featherIcon: 'divide', color: '#8B5CF6' },
 ];
 
 /**
  * Generate a single question object (with MCQ options pre‑attached).
+ * Accepts an optional `previousQuestionText` to ensure the same question isn't rolled twice in a row.
  */
-export const generateQuestion = (category, difficulty = 'medium', customRange = null) => {
+export const generateQuestion = (category, difficulty = 'medium', customRange = null, previousQuestionText = null) => {
   const actualCategory = Array.isArray(category)
     ? category[randInt(0, category.length - 1)]
     : category;
@@ -414,12 +476,19 @@ export const generateQuestion = (category, difficulty = 'medium', customRange = 
   }
 
   const range = customRange || getDefaultRange(difficulty);
-  // BUG-06 FIX: Ensure range is always valid
   const safeRange = {
     min: Math.min(range.min, range.max),
     max: Math.max(range.min, range.max),
   };
-  const q = generator(safeRange);
+  
+  let q = generator(safeRange);
+  
+  // BUG FIX: Prevent consecutive duplicate questions
+  let attempts = 0;
+  while (previousQuestionText && q.questionText === previousQuestionText && attempts < 10) {
+    q = generator(safeRange);
+    attempts++;
+  }
 
   // Build MCQ options (correct + 3 distractors), shuffled
   const distractors = generateDistractors(q.correctAnswer, 3);
@@ -439,8 +508,11 @@ export const generateQuestion = (category, difficulty = 'medium', customRange = 
  */
 export const generateQuiz = (category, count = 10, difficulty = 'medium', customRange = null) => {
   const questions = [];
+  let previousText = null;
   for (let i = 0; i < count; i++) {
-    questions.push(generateQuestion(category, difficulty, customRange));
+    const q = generateQuestion(category, difficulty, customRange, previousText);
+    previousText = q.questionText;
+    questions.push(q);
   }
   return questions;
 };
@@ -461,5 +533,7 @@ export default {
   generateQuiz,
   generateDistractors,
   checkAnswer,
+  setSeed,
+  clearSeed,
   CATEGORIES,
 };

@@ -149,7 +149,12 @@ export default function Updater() {
             <Text style={{ color: theme.success, fontSize: 16, fontWeight: '700', flex: 1 }}>You are already on the newest version!</Text>
           </View>
         )}
-        <Text style={[styles.changelogText, { color: theme.textSecondary }]}>{release.body || 'No release notes provided.'}</Text>
+        <Text style={[styles.changelogText, { color: theme.textSecondary }]}>
+          {release.body 
+            ? release.body.replace(/## /g, '').replace(/# /g, '').replace(/\*\*/g, '').replace(/\*/g, '•').replace(/__/g, '').replace(/_/g, '').trim() 
+            : 'No release notes provided.'
+          }
+        </Text>
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -188,7 +193,7 @@ export default function Updater() {
         </View>
 
         {/* Manual Update Fallback - Fix for Android scoped storage bugs */}
-        {release.isNewer && (
+        {release.html_url && (
           <TouchableOpacity 
             style={styles.manualFallbackBtn}
             onPress={() => Linking.openURL(release.html_url)}

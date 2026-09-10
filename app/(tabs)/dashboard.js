@@ -4,6 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { CATEGORIES } from '../../src/engine/MathEngine';
 import { getTotalSolved, getStreak, getQuizHistory, getCategoryStats, getDailyActiveTime } from '../../src/storage/storage';
+import { getUnlockedBadges, BADGES } from '../../src/badges';
 import { useTheme } from '../../src/theme';
 
 export default function Dashboard() {
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const [recentQuizzes, setRecentQuizzes] = useState([]);
   const [categoryStats, setCategoryStats] = useState({});
   const [activeTimes, setActiveTimes] = useState({});
+  const [unlockedBadges, setUnlockedBadges] = useState([]);
   
   // For Monthly Calendar Heatmap
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -21,9 +23,10 @@ export default function Dashboard() {
   useFocusEffect(useCallback(() => {
     setTotalSolved(getTotalSolved());
     setStreakData(getStreak());
-    setRecentQuizzes(getQuizHistory().slice(0, 5));
+    setRecentQuizzes(getQuizHistory().slice(0, 10)); // fetch up to 10 for trends
     setCategoryStats(getCategoryStats());
     setActiveTimes(getDailyActiveTime());
+    setUnlockedBadges(getUnlockedBadges());
   }, []));
 
   // Generate Calendar Days for currentMonth
@@ -156,7 +159,51 @@ export default function Dashboard() {
         </View>
       </View>
 
+      {/* Badges Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Achievements</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgeScroll}>
+          {BADGES.map(badge => {
+            const isUnlocked = unlockedBadges.includes(badge.id);
+            return (
+              <View key={badge.id} style={[styles.badgeCard, { backgroundColor: theme.surface, borderColor: isUnlocked ? badge.color : theme.border }]}>
+                <View style={[styles.badgeIconBg, { backgroundColor: isUnlocked ? badge.color + '20' : theme.background }]}>
+                  <Feather name={badge.icon} size={24} color={isUnlocked ? badge.color : theme.textSecondary} />
+                </View>
+                <Text style={[styles.badgeName, { color: isUnlocked ? theme.text : theme.textSecondary }]}>{badge.name}</Text>
+                <Text style={[styles.badgeDesc, { color: theme.textSecondary }]} numberOfLines={2}>{badge.desc}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
 
+      {/* Progress Trends Chart (Last 10 Quizzes) */}
+      {recentQuizzes.length > 2 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Accuracy Trends</Text>
+          </View>
+          <View style={[styles.trendContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendScroll}>
+              {recentQuizzes.slice().reverse().map((q, i) => {
+                const pct = Math.round((q.score / q.total) * 100);
+                const barColor = pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger;
+                return (
+                  <View key={i} style={styles.trendCol}>
+                    <Text style={[styles.trendPctText, { color: theme.textSecondary }]}>{pct}%</Text>
+                    <View style={[styles.trendTrack, { backgroundColor: theme.background }]}>
+                      <View style={[styles.trendFill, { height: `${pct}%`, backgroundColor: barColor }]} />
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      )}
 
       {/* Category Mastery Chart */}
       {Object.keys(categoryStats).length > 0 && (
@@ -269,6 +316,19 @@ const styles = StyleSheet.create({
   sectionHeader: { marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
   
+  badgeScroll: { overflow: 'visible' },
+  badgeCard: { width: 140, padding: 16, borderRadius: 16, borderWidth: 1, marginRight: 12, alignItems: 'center' },
+  badgeIconBg: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  badgeName: { fontSize: 15, fontWeight: '700', marginBottom: 4, textAlign: 'center' },
+  badgeDesc: { fontSize: 11, textAlign: 'center', lineHeight: 16 },
+
+  trendContainer: { borderRadius: 20, borderWidth: 1, padding: 20, height: 180 },
+  trendScroll: { alignItems: 'flex-end', gap: 16, paddingHorizontal: 4 },
+  trendCol: { alignItems: 'center', width: 30 },
+  trendTrack: { width: 16, height: 100, borderRadius: 8, justifyContent: 'flex-end', overflow: 'hidden' },
+  trendFill: { width: '100%', borderRadius: 8 },
+  trendPctText: { fontSize: 10, fontWeight: '700', marginBottom: 8 },
+
   chartContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', borderRadius: 20, borderWidth: 1, padding: 20, height: 200 },
   chartCol: { alignItems: 'center', flex: 1 },
   chartTrack: { width: 12, height: 100, borderRadius: 6, justifyContent: 'flex-end', overflow: 'hidden' },

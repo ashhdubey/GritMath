@@ -23,6 +23,16 @@ import {
   updateCategoryStats,
   getThemePreference,
   setThemePreference as persistThemePreference,
+  getHapticsEnabled,
+  setHapticsEnabled as persistHapticsEnabled,
+  getNotifsEnabled,
+  setNotifsEnabled as persistNotifsEnabled,
+  getNotifsTime,
+  setNotifsTime as persistNotifsTime,
+  getAutoUpdateEnabled,
+  setAutoUpdateEnabled,
+  getUpdateNotifsEnabled,
+  setUpdateNotifsEnabled,
 } from '../storage/storage';
 
 // ──────────────────── Default Constants ──────────────────
@@ -38,6 +48,7 @@ const DEFAULT_QUIZ_CONFIG = {
   timePerQuestion: 15,   // seconds
   isInfinite: false,
   infiniteLimit: null,   // null for unlimited, or a number
+  isSurvival: false,
 };
 
 const INITIAL_QUIZ_STATE = {
@@ -67,6 +78,41 @@ const useAppStore = create((set, get) => ({
   setThemePreference: (pref) => {
     persistThemePreference(pref);
     set({ themePreference: pref });
+  },
+
+  hapticsEnabled: getHapticsEnabled(),
+  
+  setHapticsEnabled: (enabled) => {
+    persistHapticsEnabled(enabled);
+    set({ hapticsEnabled: enabled });
+  },
+
+  notifsEnabled: getNotifsEnabled(),
+  
+  setNotifsEnabled: (enabled) => {
+    persistNotifsEnabled(enabled);
+    set({ notifsEnabled: enabled });
+  },
+
+  notifsTime: getNotifsTime(),
+
+  setNotifsTime: (timeStr) => {
+    persistNotifsTime(timeStr);
+    set({ notifsTime: timeStr });
+  },
+
+  autoUpdateEnabled: getAutoUpdateEnabled(),
+
+  setAutoUpdateEnabled: (enabled) => {
+    setAutoUpdateEnabled(enabled);
+    set({ autoUpdateEnabled: enabled });
+  },
+
+  updateNotifsEnabled: getUpdateNotifsEnabled(),
+
+  setUpdateNotifsEnabled: (enabled) => {
+    setUpdateNotifsEnabled(enabled);
+    set({ updateNotifsEnabled: enabled });
   },
 
   // ─── Quiz Config (setup screen) ───
@@ -141,14 +187,18 @@ const useAppStore = create((set, get) => ({
 
     const nextIndex = quiz.currentIndex + 1;
     let isFinished = nextIndex >= quiz.questions.length;
-    // BUG-01 FIX: build new questions array immutably
     let newQuestions = quiz.questions;
 
-    if (!isFinished && quizConfig.isInfinite) {
+    // BUG FIX: Survival mode ends immediately on first wrong answer
+    if (quizConfig.isSurvival && !correct) {
+      isFinished = true;
+    }
+
+    if (!isFinished && (quizConfig.isInfinite || quizConfig.isSurvival)) {
       // If infinite mode and not at limit, generate and append another question immutably
       if (!quizConfig.infiniteLimit || nextIndex < quizConfig.infiniteLimit) {
-        const nextQ = generateQuestion(quizConfig.category, quizConfig.difficulty, quizConfig.customRange);
-        newQuestions = [...quiz.questions, nextQ]; // ← immutable spread, not .push()
+        const nextQ = generateQuestion(quizConfig.category, quizConfig.difficulty, quizConfig.customRange, currentQ.questionText);
+        newQuestions = [...quiz.questions, nextQ];
         isFinished = false;
       }
     }
@@ -165,7 +215,7 @@ const useAppStore = create((set, get) => ({
         answers: newAnswers,
         currentIndex: isFinished ? quiz.currentIndex : nextIndex,
         isFinished,
-        timeRemaining: isFinished ? 0 : quizConfig.timePerQuestion,
+        timeRemaining: isFinished ? 0 : (quizConfig.isSurvival ? Math.min(quiz.timeRemaining + 3, quizConfig.timePerQuestion) : quizConfig.timePerQuestion),
       },
     });
   },
@@ -215,6 +265,17 @@ const useAppStore = create((set, get) => ({
   },
 
   /**
+   * Survival Mode: Add or subtract time
+   */
+  survivalAddTime: (delta) => {
+    set((state) => {
+      if (!state.quiz.isActive || state.quiz.isFinished) return state;
+      const newTime = Math.max(0, state.quiz.timeRemaining + delta);
+      return { quiz: { ...state.quiz, timeRemaining: newTime } };
+    });
+  },
+
+  /**
    * Specifically for Infinite Mode to manually trigger saving before quitting.
    */
   manuallyFinishQuiz: () => {
@@ -239,6 +300,9 @@ const useAppStore = create((set, get) => ({
   resetStorePreferences: () => set({
     accentColor: DEFAULT_ACCENT,
     themePreference: 'system',
+    hapticsEnabled: true,
+    notifsEnabled: false,
+    notifsTime: '20:00',
     quizConfig: { ...DEFAULT_QUIZ_CONFIG },
     quiz: { ...INITIAL_QUIZ_STATE },
   }),

@@ -6,17 +6,13 @@ import { CATEGORIES } from '../src/engine/MathEngine';
 import useAppStore from '../src/store/useAppStore';
 import { useTheme } from '../src/theme';
 
-const LIMITS = ['Infinity', 25, 50, 100];
-
-export default function InfiniteSetup() {
+export default function SurvivalSetup() {
   const router = useRouter();
   const theme = useTheme();
   const { updateQuizConfig, startQuiz } = useAppStore();
 
   const [categories, setCategories] = useState([CATEGORIES[0].key]);
   const [difficulty, setDifficulty] = useState('medium');
-  const [timePerQ, setTimePerQ] = useState(15);
-  const [limit, setLimit] = useState('Infinity'); // 'Infinity' or number
 
   const toggleCategory = (key) => {
     if (categories.includes(key)) {
@@ -30,17 +26,18 @@ export default function InfiniteSetup() {
 
   const handleStart = () => {
     updateQuizConfig({ 
-      category: categories, // now passing array 
+      category: categories,
       difficulty: difficulty, 
       rangeMode: 'random', 
       customRange: null, 
-      timePerQuestion: timePerQ,
-      isInfinite: true,
-      infiniteLimit: limit === 'Infinity' ? null : limit,
-      questionCount: limit === 'Infinity' ? 5 : limit 
+      timePerQuestion: 10, // Starts at 10s
+      isInfinite: false,
+      isSurvival: true,
+      infiniteLimit: null,
+      questionCount: 5, // Must be > 1 to provide a buffer for dynamic appending
     });
     startQuiz();
-    router.push('/infinite-quiz');
+    router.push('/survival-quiz');
   };
 
   const PillButton = ({ label, active, onPress, style }) => (
@@ -64,10 +61,30 @@ export default function InfiniteSetup() {
       </TouchableOpacity>
 
       <View style={styles.headerRow}>
-        <View style={[styles.headerIconBg, { backgroundColor: theme.primaryLight }]}>
-          <Feather name="play-circle" size={28} color={theme.primary} />
+        <View style={[styles.headerIconBg, { backgroundColor: '#FEE2E2' }]}>
+          <Feather name="clock" size={28} color="#EF4444" />
         </View>
-        <Text style={[styles.title, { color: theme.text }]}>Infinite Mode</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Survival Mode</Text>
+      </View>
+
+      <View style={[styles.rulesCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Text style={[styles.rulesTitle, { color: theme.text }]}>How it works:</Text>
+        <View style={styles.ruleItem}>
+          <Feather name="play" size={16} color={theme.primary} />
+          <Text style={[styles.ruleText, { color: theme.textSecondary }]}>Start with exactly 10 seconds.</Text>
+        </View>
+        <View style={styles.ruleItem}>
+          <Feather name="check-circle" size={16} color="#10B981" />
+          <Text style={[styles.ruleText, { color: theme.textSecondary }]}>Every correct answer adds +2 seconds.</Text>
+        </View>
+        <View style={styles.ruleItem}>
+          <Feather name="x-circle" size={16} color="#EF4444" />
+          <Text style={[styles.ruleText, { color: theme.textSecondary }]}>Every wrong answer deducts -3 seconds.</Text>
+        </View>
+        <View style={styles.ruleItem}>
+          <Feather name="alert-triangle" size={16} color="#F59E0B" />
+          <Text style={[styles.ruleText, { color: theme.textSecondary }]}>Game over when the clock hits zero!</Text>
+        </View>
       </View>
 
       <Text style={[styles.label, { color: theme.textSecondary }]}>Select Categories (Multiple)</Text>
@@ -84,23 +101,9 @@ export default function InfiniteSetup() {
         ))}
       </View>
 
-      <Text style={[styles.label, { color: theme.textSecondary }]}>Time per question: {timePerQ}s</Text>
-      <View style={styles.pillRow}>
-        {[5, 10, 15, 20, 30].map((t) => (
-          <PillButton key={t} label={`${t}s`} active={timePerQ === t} onPress={() => setTimePerQ(t)} style={{ minWidth: 48, alignItems: 'center' }} />
-        ))}
-      </View>
-
-      <Text style={[styles.label, { color: theme.textSecondary }]}>Question Limit</Text>
-      <View style={styles.pillRow}>
-        {LIMITS.map((lim) => (
-          <PillButton key={lim} label={`${lim}`} active={limit === lim} onPress={() => setLimit(lim)} />
-        ))}
-      </View>
-
-      <TouchableOpacity style={[styles.startBtn, { backgroundColor: theme.primary }]} onPress={handleStart} activeOpacity={0.8}>
-        <Text style={styles.startText}>Start Scrolling</Text>
-        <Feather name="arrow-right" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
+      <TouchableOpacity style={[styles.startBtn, { backgroundColor: '#EF4444' }]} onPress={handleStart} activeOpacity={0.8}>
+        <Text style={styles.startText}>Fight for Survival</Text>
+        <Feather name="activity" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
       </TouchableOpacity>
       <View style={{ height: 60 }} />
     </ScrollView>
@@ -110,13 +113,17 @@ export default function InfiniteSetup() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20 },
   backBtn: { paddingTop: 60, paddingBottom: 12 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 32 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   headerIconBg: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   title: { fontSize: 26, fontWeight: '800' },
-  label: { fontSize: 15, fontWeight: '600', marginBottom: 12, marginTop: 20 },
+  rulesCard: { padding: 20, borderRadius: 16, borderWidth: 1, marginBottom: 24 },
+  rulesTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  ruleItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 },
+  ruleText: { fontSize: 14, fontWeight: '500' },
+  label: { fontSize: 15, fontWeight: '600', marginBottom: 12, marginTop: 12 },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   pill: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, borderWidth: 1 },
   pillText: { fontSize: 15, fontWeight: '600' },
-  startBtn: { marginTop: 36, height: 56, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#0056D2', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
+  startBtn: { marginTop: 36, height: 56, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
   startText: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
 });

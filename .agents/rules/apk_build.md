@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # 📱 APK Build Workflow Rule
 
 Whenever you (the AI agent) successfully complete a command to build an Android APK (such as `./gradlew assembleRelease` or `./gradlew assembleDebug`), you must **ALWAYS** automatically copy the resulting `.apk` file from its deep output directory into the `releases/` directory in the project workspace (`/Users/ashhdubey/Desktop/GritMath/releases/`).

@@ -5,6 +5,7 @@ import { View, Animated, StyleSheet, Text, useColorScheme, Modal, TouchableOpaci
 import { Feather } from '@expo/vector-icons';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { loadStorage, recordActiveMinutes } from '../src/storage/storage';
+import { loadBadges } from '../src/badges';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import { useTheme } from '../src/theme';
@@ -51,7 +52,16 @@ export default function RootLayout() {
   const [splashFinished, setSplashFinished] = useState(false);
 
   useEffect(() => {
-    loadStorage().then(() => setStorageReady(true));
+    async function initApp() {
+      try {
+        await loadStorage();
+        await loadBadges();
+      } catch (e) {
+        console.warn('Init error', e);
+      }
+      setStorageReady(true);
+    }
+    initApp();
   }, []);
 
   if (!storageReady) {

@@ -11,7 +11,7 @@ export default function Revision() {
   const [selectedRec, setSelectedRec] = useState(null);
 
   // Manual state
-  const [manualType, setManualType] = useState('table'); // 'table' | 'square' | 'cube'
+  const [manualType, setManualType] = useState('table'); // 'table' | 'square' | 'cube' | 'square_root' | 'cube_root' | 'percentage'
   const [fromVal, setFromVal] = useState('2');
   const [toVal, setToVal] = useState('10');
   const [generatedList, setGeneratedList] = useState([]);
@@ -31,6 +31,12 @@ export default function Revision() {
     for (let i = from; i <= to; i++) {
       if (manualType === 'square') results.push({ id: i, label: `${i}² = ${i * i}` });
       else if (manualType === 'cube') results.push({ id: i, label: `${i}³ = ${i * i * i}` });
+      else if (manualType === 'square_root') results.push({ id: i, label: `√${i * i} = ${i}` });
+      else if (manualType === 'cube_root') results.push({ id: i, label: `∛${i * i * i} = ${i}` });
+      else if (manualType === 'percentage') {
+        const percStr = Array.from({length: 10}, (_, idx) => `${(idx + 1) * 10}% of ${i} = ${(i * ((idx + 1) * 10)) / 100}`).join('\n');
+        results.push({ id: i, label: `Percentages of ${i}:\n${percStr}` });
+      }
       else {
         const tableStr = Array.from({length: 10}, (_, idx) => `${i} × ${idx + 1} = ${i * (idx + 1)}`).join('\n');
         results.push({ id: i, label: `Table of ${i}:\n${tableStr}` });
@@ -48,7 +54,12 @@ export default function Revision() {
             <Text style={[styles.backText, { color: theme.text }]}>Back</Text>
           </TouchableOpacity>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            {selectedRec === 'squares' ? 'Squares (1-25)' : selectedRec === 'cubes' ? 'Cubes (1-20)' : 'Tables (2-20)'}
+            {selectedRec === 'squares' ? 'Squares (1-25)' : 
+             selectedRec === 'cubes' ? 'Cubes (1-20)' : 
+             selectedRec === 'square_roots' ? 'Square Roots' :
+             selectedRec === 'cube_roots' ? 'Cube Roots' :
+             selectedRec === 'percentages' ? 'Common Percentages' :
+             'Tables (2-20)'}
           </Text>
           <View style={styles.grid}>
             {selectedRec === 'squares' && Array.from({length: 25}, (_, i) => i + 1).map(n => (
@@ -61,6 +72,33 @@ export default function Revision() {
                 <Text style={[styles.gridText, { color: theme.text }]}>{n}³ = {n*n*n}</Text>
               </View>
             ))}
+            {selectedRec === 'square_roots' && Array.from({length: 25}, (_, i) => i + 1).map(n => (
+              <View key={n} style={[styles.gridItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Text style={[styles.gridText, { color: theme.text }]}>√{n*n} = {n}</Text>
+              </View>
+            ))}
+            {selectedRec === 'cube_roots' && Array.from({length: 20}, (_, i) => i + 1).map(n => (
+              <View key={n} style={[styles.gridItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Text style={[styles.gridText, { color: theme.text }]}>∛{n*n*n} = {n}</Text>
+              </View>
+            ))}
+            {selectedRec === 'percentages' && (
+              <>
+                {[
+                  { label: 'Halves & Quarters', items: ['50% = 1/2', '25% = 1/4', '75% = 3/4'] },
+                  { label: 'Thirds', items: ['33.3% ≈ 1/3', '66.6% ≈ 2/3'] },
+                  { label: 'Fifths', items: ['20% = 1/5', '40% = 2/5', '60% = 3/5', '80% = 4/5'] },
+                  { label: 'Eighths', items: ['12.5% = 1/8', '37.5% = 3/8', '62.5% = 5/8', '87.5% = 7/8'] }
+                ].map((group, idx) => (
+                  <View key={idx} style={[styles.gridItem, { backgroundColor: theme.surface, borderColor: theme.border, width: '48%' }]}>
+                    <Text style={[styles.gridText, { color: theme.text, marginBottom: 8 }]}>{group.label}</Text>
+                    {group.items.map(item => (
+                      <Text key={item} style={{ color: theme.textSecondary, fontSize: 13, marginBottom: 4 }}>{item}</Text>
+                    ))}
+                  </View>
+                ))}
+              </>
+            )}
             {selectedRec === 'tables' && Array.from({length: 19}, (_, i) => i + 2).map(n => (
               <View key={n} style={[styles.gridItem, { backgroundColor: theme.surface, borderColor: theme.border, width: '48%' }]}>
                 <Text style={[styles.gridText, { color: theme.text, marginBottom: 8 }]}>Table of {n}</Text>
@@ -78,23 +116,47 @@ export default function Revision() {
       <View style={styles.content}>
         <TouchableOpacity style={[styles.navCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setSelectedRec('squares')}>
           <View style={[styles.iconBg, { backgroundColor: theme.primaryLight }]}>
-            <Feather name="grid" size={24} color={theme.primary} />
+            <Text style={{ fontSize: 20, fontWeight: '700', color: theme.primary }}>x²</Text>
           </View>
           <Text style={[styles.navCardTitle, { color: theme.text }]}>Squares</Text>
           <Feather name="chevron-right" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
         
+        <TouchableOpacity style={[styles.navCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setSelectedRec('square_roots')}>
+          <View style={[styles.iconBg, { backgroundColor: theme.primaryLight }]}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: theme.primary }}>√x</Text>
+          </View>
+          <Text style={[styles.navCardTitle, { color: theme.text }]}>Square Roots</Text>
+          <Feather name="chevron-right" size={24} color={theme.textSecondary} />
+        </TouchableOpacity>
+        
         <TouchableOpacity style={[styles.navCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setSelectedRec('cubes')}>
           <View style={[styles.iconBg, { backgroundColor: theme.successLight }]}>
-            <Feather name="box" size={24} color={theme.success} />
+            <Text style={{ fontSize: 20, fontWeight: '700', color: theme.success }}>x³</Text>
           </View>
           <Text style={[styles.navCardTitle, { color: theme.text }]}>Cubes</Text>
           <Feather name="chevron-right" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.navCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setSelectedRec('tables')}>
+        <TouchableOpacity style={[styles.navCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setSelectedRec('cube_roots')}>
+          <View style={[styles.iconBg, { backgroundColor: theme.successLight }]}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: theme.success }}>∛x</Text>
+          </View>
+          <Text style={[styles.navCardTitle, { color: theme.text }]}>Cube Roots</Text>
+          <Feather name="chevron-right" size={24} color={theme.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.navCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setSelectedRec('percentages')}>
           <View style={[styles.iconBg, { backgroundColor: theme.warningLight }]}>
-            <Feather name="x" size={24} color={theme.warning} />
+            <Feather name="percent" size={24} color={theme.warning} />
+          </View>
+          <Text style={[styles.navCardTitle, { color: theme.text }]}>Percentages</Text>
+          <Feather name="chevron-right" size={24} color={theme.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.navCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setSelectedRec('tables')}>
+          <View style={[styles.iconBg, { backgroundColor: theme.dangerLight || '#FEE2E2' }]}>
+            <Feather name="x" size={24} color={theme.danger || '#EF4444'} />
           </View>
           <Text style={[styles.navCardTitle, { color: theme.text }]}>Multiplication Tables</Text>
           <Feather name="chevron-right" size={24} color={theme.textSecondary} />
@@ -128,15 +190,17 @@ export default function Revision() {
         {tab === 'recommended' ? renderRecommendedContent() : (
           <View style={styles.content}>
             <View style={styles.typeSelector}>
-              {['table', 'square', 'cube'].map(t => (
-                <TouchableOpacity 
-                  key={t}
-                  style={[styles.typeBtn, { borderColor: theme.border }, manualType === t && { borderColor: theme.primary, backgroundColor: theme.primaryLight }]}
-                  onPress={() => setManualType(t)}
-                >
-                  <Text style={[styles.typeText, manualType === t ? { color: theme.primary } : { color: theme.textSecondary }]}>{t.toUpperCase()}</Text>
-                </TouchableOpacity>
-              ))}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                {[{id: 'table', label: 'TABLE'}, {id: 'square', label: 'SQUARE'}, {id: 'cube', label: 'CUBE'}, {id: 'square_root', label: 'SQ ROOT'}, {id: 'cube_root', label: 'CB ROOT'}, {id: 'percentage', label: 'PERCENT'}].map(t => (
+                  <TouchableOpacity 
+                    key={t.id}
+                    style={[styles.typeBtn, { borderColor: theme.border, paddingHorizontal: 16 }, manualType === t.id && { borderColor: theme.primary, backgroundColor: theme.primaryLight }]}
+                    onPress={() => setManualType(t.id)}
+                  >
+                    <Text style={[styles.typeText, manualType === t.id ? { color: theme.primary } : { color: theme.textSecondary }]}>{t.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
 
             <View style={styles.inputRow}>

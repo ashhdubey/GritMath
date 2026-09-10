@@ -52,6 +52,12 @@ const KEYS = {
   THEME_PREFERENCE: 'themePreference',
   QUIZ_HISTORY: 'quizHistory',
   DAILY_ACTIVE_TIME: 'dailyActiveTime',
+  LAST_DAILY_COMPLETED: 'lastDailyCompletedDate',
+  HAPTICS_ENABLED: 'hapticsEnabled',
+  NOTIFS_ENABLED: 'notifsEnabled',
+  NOTIFS_TIME: 'notifsTime', // e.g. "20:00"
+  AUTO_UPDATE_ENABLED: 'autoUpdateEnabled',
+  UPDATE_NOTIFS_ENABLED: 'updateNotifsEnabled',
 };
 
 // ──────────────────── Helpers ────────────────────────────
@@ -167,6 +173,12 @@ export const addToTotalSolved = (count) => {
   setVal(KEYS.TOTAL_SOLVED, getTotalSolved() + count);
 };
 
+// ──────────────────── Daily Completion ───────────────────
+
+export const getLastDailyCompletedDate = () => getVal(KEYS.LAST_DAILY_COMPLETED, null);
+
+export const setLastDailyCompletedDate = (dateStr) => setVal(KEYS.LAST_DAILY_COMPLETED, dateStr);
+
 // ──────────────────── User Preferences ───────────────────
 
 export const getAccentColor = () => getVal(KEYS.ACCENT_COLOR, '#6C5CE7');
@@ -174,8 +186,26 @@ export const getAccentColor = () => getVal(KEYS.ACCENT_COLOR, '#6C5CE7');
 export const setAccentColor = (color) => setVal(KEYS.ACCENT_COLOR, color);
 
 export const getThemePreference = () => getVal(KEYS.THEME_PREFERENCE, 'system');
-
 export const setThemePreference = (pref) => setVal(KEYS.THEME_PREFERENCE, pref);
+
+// ──────────────────── Haptics & Notifications ────────────
+
+export const getHapticsEnabled = () => getVal(KEYS.HAPTICS_ENABLED, true);
+export const setHapticsEnabled = (enabled) => setVal(KEYS.HAPTICS_ENABLED, enabled);
+
+export const getNotifsEnabled = () => getVal(KEYS.NOTIFS_ENABLED, false);
+export const setNotifsEnabled = (enabled) => setVal(KEYS.NOTIFS_ENABLED, enabled);
+
+export const getNotifsTime = () => getVal(KEYS.NOTIFS_TIME, '20:00'); // Default 8 PM
+export const setNotifsTime = (timeStr) => setVal(KEYS.NOTIFS_TIME, timeStr);
+
+export const getAutoUpdateEnabled = () => getVal(KEYS.AUTO_UPDATE_ENABLED, true);
+export const setAutoUpdateEnabled = (enabled) => setVal(KEYS.AUTO_UPDATE_ENABLED, enabled);
+
+export const getUpdateNotifsEnabled = () => getVal(KEYS.UPDATE_NOTIFS_ENABLED, true);
+export const setUpdateNotifsEnabled = (enabled) => setVal(KEYS.UPDATE_NOTIFS_ENABLED, enabled);
+
+// ──────────────────── Advanced ───────────────────────────
 
 export const isOnboardingDone = () => getVal(KEYS.ONBOARDING_DONE, false);
 

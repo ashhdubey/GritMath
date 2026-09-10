@@ -12,6 +12,7 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../src/theme';
 import { setOnboardingDone } from '../src/storage/storage';
@@ -89,27 +90,27 @@ export default function Onboarding() {
   const router = useRouter();
   const theme = useTheme();
 
+  const isLastSlide = currentIndex === SLIDES.length - 1;
+
   const handleNext = () => {
     if (currentIndex < SLIDES.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
       setOnboardingDone();
-      router.replace('/dashboard');
+      router.replace('/home');
     }
   };
 
   const handleSkip = () => {
     setOnboardingDone();
-    router.replace('/dashboard');
+    router.replace('/home');
   };
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index || 0);
+    if (viewableItems[0]) {
+      setCurrentIndex(viewableItems[0].index);
     }
   }).current;
-
-  const isLastSlide = currentIndex === SLIDES.length - 1;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -172,9 +173,7 @@ export default function Onboarding() {
           onPress={handleNext}
           activeOpacity={0.8}
         >
-          <Text style={styles.nextText}>
-            {isLastSlide ? 'Get Started' : 'Next'}
-          </Text>
+          <Text style={styles.nextText}>{isLastSlide ? "Get Started" : "Next"}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -195,6 +194,9 @@ const styles = StyleSheet.create({
   bottomSection: { paddingHorizontal: 24, paddingBottom: 50, alignItems: 'center' },
   dotsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 36, gap: 12 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  nextBtn: { width: '100%', height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+  nextBtn: { width: '100%', height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
   nextText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 0.5 },
+  goalContainer: { marginTop: 24, width: '100%', gap: 12 },
+  goalBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1 },
+  goalText: { fontSize: 16, fontWeight: '600' }
 });

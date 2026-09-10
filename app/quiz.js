@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import useAppStore from '../src/store/useAppStore';
 import { useTheme } from '../src/theme';
 import MathEquation from '../src/components/MathEquation';
+import { hapticTap, hapticWrong } from '../src/haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -50,6 +51,10 @@ export default function Quiz() {
     const isCorrect = typeof correctAns === 'string'
       ? String(userAns).trim() === correctAns
       : Number(userAns) === correctAns;
+      
+    if (isCorrect) hapticTap();
+    else hapticWrong();
+
     setFeedback({ correct: isCorrect, correctAnswer: correctAns, userAnswer: userAns });
     Animated.sequence([
       Animated.timing(feedbackOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),

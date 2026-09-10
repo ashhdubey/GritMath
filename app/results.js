@@ -1,10 +1,13 @@
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import useAppStore from '../src/store/useAppStore';
 import { CATEGORIES } from '../src/engine/MathEngine';
 import { useTheme } from '../src/theme';
 import MathEquation from '../src/components/MathEquation';
+import { hapticFinish } from '../src/haptics';
+import { checkBadgesAfterQuiz, BADGES } from '../src/badges';
 
 export default function Results() {
   const router = useRouter();
@@ -18,6 +21,23 @@ export default function Results() {
   const avgTime = quiz.answers.length > 0
     ? (quiz.answers.reduce((sum, a) => sum + (a.timeTaken || 0), 0) / quiz.answers.length).toFixed(1)
     : '0';
+
+  useEffect(() => {
+    hapticFinish();
+    
+    // Check for badges asynchronously
+    checkBadgesAfterQuiz(quizConfig, quiz.score, total).then(unlocked => {
+      if (unlocked && unlocked.length > 0) {
+        // Find the badge objects
+        const unlockedBadges = unlocked.map(id => BADGES.find(b => b.id === id));
+        
+        // Show an alert for the first one unlocked (or combine them)
+        const names = unlockedBadges.map(b => b.name).join(', ');
+        Alert.alert('🏆 Badge Unlocked!', `You just earned: ${names}`);
+      }
+    });
+
+  }, []);
 
   const scoreColor = pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger;
 

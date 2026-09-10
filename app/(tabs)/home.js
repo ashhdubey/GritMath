@@ -81,9 +81,26 @@ export default function Home() {
         </View>
       </View>
 
+      {/* Daily Challenge CTA */}
+      <TouchableOpacity 
+        style={[styles.infiniteBanner, { backgroundColor: '#10B981', marginBottom: 16 }]} 
+        onPress={() => router.push('/daily-challenge')}
+        activeOpacity={0.9}
+      >
+        <View style={styles.infiniteContent}>
+          <View style={styles.infiniteTextContainer}>
+            <Text style={styles.infiniteTitle}>Daily Challenge</Text>
+            <Text style={styles.infiniteDesc}>Global 20-Question Gauntlet</Text>
+          </View>
+          <View style={[styles.infiniteIconBg, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            <Feather name="globe" size={20} color="#FFFFFF" />
+          </View>
+        </View>
+      </TouchableOpacity>
+
       {/* Infinite Scroll CTA */}
       <TouchableOpacity 
-        style={[styles.infiniteBanner, { backgroundColor: theme.primary }]} 
+        style={[styles.infiniteBanner, { backgroundColor: theme.primary, marginBottom: 16 }]} 
         onPress={() => router.push('/infinite-setup')}
         activeOpacity={0.9}
       >
@@ -94,6 +111,23 @@ export default function Home() {
           </View>
           <View style={[styles.infiniteIconBg, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
             <Feather name="play" size={20} color="#FFFFFF" />
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {/* Survival Mode CTA */}
+      <TouchableOpacity 
+        style={[styles.infiniteBanner, { backgroundColor: '#EF4444' }]} 
+        onPress={() => router.push('/survival-setup')}
+        activeOpacity={0.9}
+      >
+        <View style={styles.infiniteContent}>
+          <View style={styles.infiniteTextContainer}>
+            <Text style={styles.infiniteTitle}>Survival Mode</Text>
+            <Text style={styles.infiniteDesc}>Race against the clock</Text>
+          </View>
+          <View style={[styles.infiniteIconBg, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            <Feather name="clock" size={20} color="#FFFFFF" />
           </View>
         </View>
       </TouchableOpacity>

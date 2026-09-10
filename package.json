@@ -1,6 +1,6 @@
 {
   "name": "gritmath",
-  "version": "1.8.11",
+  "version": "2.0.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.14",
@@ -11,8 +11,10 @@
     "expo-blur": "~57.0.2",
     "expo-constants": "~57.0.15",
     "expo-file-system": "~57.0.6",
+    "expo-haptics": "~57.0.2",
     "expo-intent-launcher": "~57.0.1",
     "expo-linking": "~57.0.8",
+    "expo-notifications": "~57.0.17",
     "expo-router": "~57.0.17",
     "expo-splash-screen": "~57.0.8",
     "expo-status-bar": "~57.0.1",

@@ -9,11 +9,10 @@ import { hapticTap, hapticWrong } from '../src/haptics';
 
 const { width, height } = Dimensions.get('window');
 
-const QuestionSlide = ({ question, index, currentIndex, onAnswer, timerWidth, timerColor, theme }) => {
+const QuestionSlide = ({ question, index, currentIndex, onAnswer, theme }) => {
   const [localFeedback, setLocalFeedback] = useState(null);
   const isActive = index === currentIndex;
 
-  // BUG-08 FIX: Reset local feedback when this slide becomes the active one
   useEffect(() => {
     if (isActive) {
       setLocalFeedback(null);
@@ -30,21 +29,12 @@ const QuestionSlide = ({ question, index, currentIndex, onAnswer, timerWidth, ti
     setLocalFeedback({ correct: isCorrect, userAnswer: opt, correctAnswer: question.correctAnswer });
     
     setTimeout(() => {
-      onAnswer(opt);
+      onAnswer(opt, isCorrect);
     }, 600);
   };
 
   return (
     <View style={styles.slideContainer}>
-      {isActive && (
-        <View style={styles.timerContainer}>
-          <Animated.View style={[styles.timerBar, {
-            backgroundColor: timerColor,
-            width: timerWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-          }]} />
-        </View>
-      )}
-
       <View style={styles.questionArea}>
         <MathEquation text={question.questionText} style={styles.questionText} color={theme.text} fontSize={56} />
       </View>
@@ -83,12 +73,12 @@ const QuestionSlide = ({ question, index, currentIndex, onAnswer, timerWidth, ti
   );
 };
 
-export default function InfiniteQuiz() {
+export default function SurvivalQuiz() {
   const router = useRouter();
   const theme = useTheme();
-  const { quiz, submitAnswer, tickTimer, timeUp, manuallyFinishQuiz, quizConfig } = useAppStore();
+  const { quiz, submitAnswer, tickTimer, timeUp, survivalAddTime, manuallyFinishQuiz, quizConfig } = useAppStore();
   const flatListRef = useRef(null);
-  const timerWidth = useRef(new Animated.Value(1)).current;
+  const [timePopup, setTimePopup] = useState(null);
 
   useEffect(() => {
     if (!quiz.isActive || quiz.isFinished) return;
@@ -97,15 +87,9 @@ export default function InfiniteQuiz() {
   }, [quiz.isActive, quiz.isFinished]);
 
   useEffect(() => {
-    if (!quiz.isActive || quiz.isFinished) return;
-    const pct = quiz.timeRemaining / quizConfig.timePerQuestion;
-    Animated.timing(timerWidth, { toValue: pct, duration: 300, useNativeDriver: false }).start();
-  }, [quiz.timeRemaining]);
-
-  useEffect(() => {
     if (quiz.isActive && !quiz.isFinished && quiz.timeRemaining <= 0) {
-      handleAnswer(null);
-      timeUp();
+      handleAnswer(null, false);
+      timeUp(); // Ends quiz
     }
   }, [quiz.timeRemaining]);
 
@@ -115,17 +99,22 @@ export default function InfiniteQuiz() {
     }
   }, [quiz.isFinished]);
 
-  const handleAnswer = (userAns) => {
-    const timeTaken = quizConfig.timePerQuestion - quiz.timeRemaining;
+  const handleAnswer = (userAns, isCorrect) => {
+    if (userAns !== null) {
+      const delta = isCorrect ? 2 : -3;
+      survivalAddTime(delta);
+      
+      setTimePopup(delta > 0 ? '+2s' : '-3s');
+      setTimeout(() => setTimePopup(null), 800);
+    }
+
+    const timeTaken = 1; // Not accurate but doesn't matter for survival mode saving
     submitAnswer(userAns, timeTaken);
     
-    // BUG-02 FIX: Read updated index directly from store after submitAnswer
     setTimeout(() => {
       const updatedIndex = useAppStore.getState().quiz.currentIndex;
       if (!useAppStore.getState().quiz.isFinished) {
         flatListRef.current?.scrollToIndex({ index: updatedIndex, animated: true });
-        // BUG-08 FIX: Reset the timer bar to full when scrolling to a new question
-        timerWidth.setValue(1);
       }
     }, 100);
   };
@@ -138,24 +127,31 @@ export default function InfiniteQuiz() {
     );
   }
 
-  const timerColor = quiz.timeRemaining > quizConfig.timePerQuestion * 0.5 ? theme.success
-    : quiz.timeRemaining > quizConfig.timePerQuestion * 0.25 ? theme.warning : theme.danger;
+  const timerColor = quiz.timeRemaining > 5 ? theme.text : theme.danger;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.quizHeader}>
         <Text style={[styles.counter, { color: theme.textSecondary }]}>
-          Q {quiz.currentIndex + 1} {quizConfig.infiniteLimit ? `/ ${quizConfig.infiniteLimit}` : ' (Infinite)'}
+          Score: {quiz.score}
         </Text>
-        <TouchableOpacity 
-          onPress={() => { 
-            manuallyFinishQuiz(); 
-            // the useEffect will automatically route to results!
-          }} 
-          style={styles.closeBtn}
-        >
+        <TouchableOpacity onPress={() => manuallyFinishQuiz()} style={styles.closeBtn}>
           <Feather name="x" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.clockContainer}>
+        <Feather name="clock" size={24} color={timerColor} />
+        <Text style={[styles.clockText, { color: timerColor }]}>{quiz.timeRemaining}s</Text>
+        
+        {timePopup && (
+          <Text style={[
+            styles.timePopup, 
+            { color: timePopup.startsWith('+') ? theme.success : theme.danger }
+          ]}>
+            {timePopup}
+          </Text>
+        )}
       </View>
 
       <FlatList
@@ -168,8 +164,6 @@ export default function InfiniteQuiz() {
             index={index}
             currentIndex={quiz.currentIndex}
             onAnswer={handleAnswer}
-            timerWidth={timerWidth}
-            timerColor={timerColor}
             theme={theme}
           />
         )}
@@ -190,14 +184,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16,
     position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10
   },
-  counter: { fontSize: 16, fontWeight: '700' },
+  counter: { fontSize: 18, fontWeight: '800' },
   closeBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },
   
+  clockContainer: {
+    position: 'absolute',
+    top: 120,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+    gap: 8,
+  },
+  clockText: { fontSize: 32, fontWeight: '900' },
+  timePopup: {
+    position: 'absolute',
+    right: '25%',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+
   slideContainer: { height: height, width: width, justifyContent: 'center' },
-  timerContainer: { height: 4, backgroundColor: 'transparent', position: 'absolute', top: 120, left: 20, right: 20, borderRadius: 2, overflow: 'hidden' },
-  timerBar: { height: 4, borderRadius: 2 },
-  
-  questionArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, marginTop: 40 },
+  questionArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, marginTop: 80 },
   questionText: { fontSize: 56, fontWeight: '900', textAlign: 'center', letterSpacing: -2 },
   
   mcqGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingHorizontal: 20, paddingBottom: 100 },
