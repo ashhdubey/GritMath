@@ -193,10 +193,10 @@ export default function Updater() {
         </View>
 
         {/* Manual Update Fallback - Fix for Android scoped storage bugs */}
-        {release.html_url && (
+        {apkAsset && (
           <TouchableOpacity 
             style={styles.manualFallbackBtn}
-            onPress={() => Linking.openURL(release.html_url)}
+            onPress={() => Linking.openURL(apkAsset.browser_download_url)}
           >
             <Feather name="external-link" size={14} color={theme.textSecondary} />
             <Text style={[styles.manualFallbackText, { color: theme.textSecondary }]}>

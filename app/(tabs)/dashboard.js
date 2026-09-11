@@ -6,6 +6,7 @@ import { CATEGORIES } from '../../src/engine/MathEngine';
 import { getTotalSolved, getStreak, getQuizHistory, getCategoryStats, getDailyActiveTime } from '../../src/storage/storage';
 import { getUnlockedBadges, BADGES } from '../../src/badges';
 import { useTheme } from '../../src/theme';
+import AdBanner from '../../src/components/AdBanner';
 
 export default function Dashboard() {
   const theme = useTheme();
@@ -160,6 +161,10 @@ export default function Dashboard() {
       </View>
 
       {/* Badges Section */}
+      <View style={{ marginBottom: 32, backgroundColor: 'transparent' }}>
+        <AdBanner />
+      </View>
+
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Achievements</Text>
@@ -296,6 +301,8 @@ export default function Dashboard() {
           <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>Play your first quiz in the Practice tab to start seeing your performance metrics here.</Text>
         </View>
       )}
+
+      <AdBanner />
 
       <View style={{ height: 120 }} />
     </ScrollView>

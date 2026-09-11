@@ -99,6 +99,7 @@ export default function TabLayout() {
   const theme = useTheme();
   return (
     <Tabs
+      initialRouteName="home"
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,

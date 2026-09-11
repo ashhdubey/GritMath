@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import { useTheme } from '../src/theme';
 import { compareSemVer } from '../src/utils';
+import { initAds } from '../src/ads/AdManager';
 
 // Keep the native splash screen visible until we're ready
 ExpoSplashScreen.preventAutoHideAsync();
@@ -102,6 +103,10 @@ function MainApp() {
     return () => {
       subscription.remove();
     };
+  }, []);
+
+  useEffect(() => {
+    initAds();
   }, []);
 
   useEffect(() => {

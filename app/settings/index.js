@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme';
+import AdBanner from '../../src/components/AdBanner';
 
 export default function SettingsIndex() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function SettingsIndex() {
         <MenuItem 
           icon="download" 
           title="App Updates" 
-          route="/settings/updates" 
+          route="/updater" 
         />
         <MenuItem 
           icon="layout" 
@@ -66,6 +67,8 @@ export default function SettingsIndex() {
           isLast={true}
         />
       </View>
+
+      <AdBanner />
 
       <View style={{ height: 60 }} />
     </ScrollView>

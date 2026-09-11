@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, FlatList } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import useAppStore from '../src/store/useAppStore';
 import { useTheme } from '../src/theme';
 import MathEquation from '../src/components/MathEquation';
 import { hapticTap, hapticWrong } from '../src/haptics';
+import { showInterstitialAd } from '../src/ads/AdManager';
 
 const { width, height } = Dimensions.get('window');
 
-const QuestionSlide = ({ question, index, currentIndex, onAnswer, theme }) => {
+const QuestionSlide = ({ question, index, currentIndex, onAnswer, onInteractionStart, theme }) => {
   const [localFeedback, setLocalFeedback] = useState(null);
   const isActive = index === currentIndex;
 
@@ -27,6 +28,7 @@ const QuestionSlide = ({ question, index, currentIndex, onAnswer, theme }) => {
     else hapticWrong();
     
     setLocalFeedback({ correct: isCorrect, userAnswer: opt, correctAnswer: question.correctAnswer });
+    onInteractionStart();
     
     setTimeout(() => {
       onAnswer(opt, isCorrect);
@@ -75,35 +77,48 @@ const QuestionSlide = ({ question, index, currentIndex, onAnswer, theme }) => {
 
 export default function SurvivalQuiz() {
   const router = useRouter();
+  const navigation = useNavigation();
   const theme = useTheme();
-  const { quiz, submitAnswer, tickTimer, timeUp, survivalAddTime, manuallyFinishQuiz, quizConfig } = useAppStore();
+  const { quiz, submitAnswer, tickTimer, timeUp, manuallyFinishQuiz, quizConfig } = useAppStore();
   const flatListRef = useRef(null);
   const [timePopup, setTimePopup] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    if (!quiz.isActive || quiz.isFinished) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (useAppStore.getState().quiz.isFinished) return;
+      e.preventDefault();
+      manuallyFinishQuiz();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
+    if (!quiz.isActive || quiz.isFinished || isPaused) return;
     const interval = setInterval(() => { tickTimer(); }, 1000);
     return () => clearInterval(interval);
-  }, [quiz.isActive, quiz.isFinished]);
+  }, [quiz.isActive, quiz.isFinished, isPaused]);
 
   useEffect(() => {
-    if (quiz.isActive && !quiz.isFinished && quiz.timeRemaining <= 0) {
-      handleAnswer(null, false);
+    if (quiz.isActive && !quiz.isFinished && quiz.timeRemaining <= 0 && !isPaused) {
       timeUp(); // Ends quiz
     }
-  }, [quiz.timeRemaining]);
+  }, [quiz.timeRemaining, isPaused, quiz.isActive, quiz.isFinished]);
 
   useEffect(() => {
     if (quiz.isFinished) {
-      setTimeout(() => router.replace('/results'), 800);
+      setTimeout(() => {
+        showInterstitialAd(() => {
+          router.replace('/results');
+        });
+      }, 800);
     }
   }, [quiz.isFinished]);
 
   const handleAnswer = (userAns, isCorrect) => {
+    setIsPaused(false);
     if (userAns !== null) {
       const delta = isCorrect ? 2 : -3;
-      survivalAddTime(delta);
-      
       setTimePopup(delta > 0 ? '+2s' : '-3s');
       setTimeout(() => setTimePopup(null), 800);
     }
@@ -164,6 +179,7 @@ export default function SurvivalQuiz() {
             index={index}
             currentIndex={quiz.currentIndex}
             onAnswer={handleAnswer}
+            onInteractionStart={() => setIsPaused(true)}
             theme={theme}
           />
         )}

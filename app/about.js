@@ -41,11 +41,11 @@ export default function About() {
         </View>
 
         <Text style={[styles.bio, { color: theme.textSecondary }]}>
-          100% offline speed math trainer. Made for competitive exam preparation.
+          The ultimate free speed math trainer. Made for competitive exam preparation.
         </Text>
         
         <Text style={[styles.bio, { color: theme.primary, fontWeight: '700', marginBottom: 0 }]}>
-          Zero ads. Zero accounts. Zero cost.
+          Free, focused, and fast. Built for competitive minds.
         </Text>
       </View>
 
@@ -69,7 +69,7 @@ export default function About() {
         </View>
 
         <Text style={[styles.bio, { color: theme.textSecondary }]}>
-          Passionate about building fast, completely offline, and distraction-free mobile applications. GritMath was built with the belief that tools for learning should be completely free and endlessly reliable.
+          Passionate about building fast and focused mobile applications. GritMath was built with the belief that tools for learning should be completely free and endlessly reliable.
         </Text>
 
         <View style={[styles.divider, { backgroundColor: theme.border }]} />

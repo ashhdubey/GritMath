@@ -24,7 +24,7 @@ const SLIDES = [
     id: '1',
     emoji: '🧘',
     title: 'Zero Distractions',
-    subtitle: 'No ads, no accounts, no internet required.\nJust you and math.',
+    subtitle: 'The ultimate free math trainer.\nMaster mental math at your pace.',
     gradient: ['#6C5CE7', '#A29BFE'],
   },
   {

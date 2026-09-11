@@ -1,21 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import useAppStore from '../src/store/useAppStore';
 import { useTheme } from '../src/theme';
 import MathEquation from '../src/components/MathEquation';
 import { hapticTap, hapticWrong } from '../src/haptics';
+import { showInterstitialAd } from '../src/ads/AdManager';
 
 const { width } = Dimensions.get('window');
 
 // BUG-10 FIX: Numpad mode removed entirely. Only MCQ is supported.
 export default function Quiz() {
   const router = useRouter();
+  const navigation = useNavigation();
   const theme = useTheme();
-  const { quiz, submitAnswer, tickTimer, timeUp, endQuiz, quizConfig } = useAppStore();
+  const { quiz, submitAnswer, tickTimer, timeUp, endQuiz, manuallyFinishQuiz, quizConfig } = useAppStore();
   const [feedback, setFeedback] = useState(null); // { correct: bool, correctAnswer }
+  const flatListRef = useRef(null);
   const timerWidth = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (useAppStore.getState().quiz.isFinished) return;
+      e.preventDefault();
+      manuallyFinishQuiz();
+    });
+    return unsubscribe;
+  }, [navigation]);
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
 
   // Timer tick
@@ -43,7 +55,11 @@ export default function Quiz() {
   // Navigate to results when finished
   useEffect(() => {
     if (quiz.isFinished) {
-      setTimeout(() => router.replace('/results'), 800);
+      setTimeout(() => {
+        showInterstitialAd(() => {
+          router.replace('/results');
+        });
+      }, 800);
     }
   }, [quiz.isFinished]);
 
@@ -98,7 +114,10 @@ export default function Quiz() {
       <View style={styles.quizHeader}>
         <Text style={[styles.timerText, { color: theme.text }]}>{quiz.timeRemaining}s</Text>
         <Text style={[styles.counter, { color: theme.textSecondary }]}>Q {quiz.currentIndex + 1} / {quiz.questions.length}</Text>
-        <TouchableOpacity onPress={() => { endQuiz(); router.replace('/home'); }} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => { 
+          endQuiz(); 
+          showInterstitialAd(() => router.replace('/home')); 
+        }} style={{ padding: 4 }}>
           <Feather name="x" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>

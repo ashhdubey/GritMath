@@ -1,6 +1,6 @@
 {
-  "name": "gritmath",
-  "version": "2.0.0",
+  "name": "GritMath",
+  "version": "2.0.4",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.14",
@@ -9,6 +9,7 @@
     "expo": "~57.0.17",
     "expo-application": "~57.0.2",
     "expo-blur": "~57.0.2",
+    "expo-build-properties": "^57.0.17",
     "expo-constants": "~57.0.15",
     "expo-file-system": "~57.0.6",
     "expo-haptics": "~57.0.2",
@@ -22,6 +23,7 @@
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-google-mobile-ads": "^15.8.3",
     "react-native-mmkv": "^4.3.2",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",

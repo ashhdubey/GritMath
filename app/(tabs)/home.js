@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { CATEGORIES } from '../../src/engine/MathEngine';
 import { getStreak } from '../../src/storage/storage';
 import { useTheme } from '../../src/theme';
+import AdBanner from '../../src/components/AdBanner';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -54,83 +55,64 @@ export default function Home() {
           <Text style={[styles.appName, { color: theme.text }]}>GritMath</Text>
           <Text style={[styles.tagline, { color: theme.textSecondary }]}>Speed. Precision. Grit.</Text>
         </View>
-        <TouchableOpacity style={[styles.settingsBtn, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => router.push('/settings')}>
-          <Feather name="settings" size={20} color={theme.icon} />
+        <View style={styles.headerActions}>
+          <View style={[styles.miniStreak, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={styles.miniStreakIcon}>🔥</Text>
+            <Text style={[styles.miniStreakText, { color: theme.text }]}>{streak.count}</Text>
+          </View>
+          <TouchableOpacity style={[styles.settingsBtn, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => router.push('/settings')}>
+            <Feather name="settings" size={20} color={theme.icon} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={{ marginBottom: 16, backgroundColor: 'transparent' }}>
+        <AdBanner />
+      </View>
+
+      {/* Game Modes */}
+      <View style={styles.modesGrid}>
+        {/* Daily Challenge */}
+        <TouchableOpacity 
+          style={[styles.modeCard, { backgroundColor: theme.surface, borderColor: theme.border }]} 
+          onPress={() => router.push('/daily-challenge')}
+          activeOpacity={0.9}
+        >
+          <View style={[styles.modeIconBg, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+            <Feather name="award" size={24} color="#10B981" />
+          </View>
+          <Text style={[styles.modeTitle, { color: theme.text }]}>Daily</Text>
+        </TouchableOpacity>
+
+        {/* Infinite Mode */}
+        <TouchableOpacity 
+          style={[styles.modeCard, { backgroundColor: theme.surface, borderColor: theme.border }]} 
+          onPress={() => router.push('/infinite-setup')}
+          activeOpacity={0.9}
+        >
+          <View style={[styles.modeIconBg, { backgroundColor: theme.primaryLight }]}>
+            <Feather name="repeat" size={24} color={theme.primary} />
+          </View>
+          <Text style={[styles.modeTitle, { color: theme.text }]}>Endless</Text>
+        </TouchableOpacity>
+
+        {/* Survival Mode */}
+        <TouchableOpacity 
+          style={[styles.modeCard, { backgroundColor: theme.surface, borderColor: theme.border }]} 
+          onPress={() => router.push('/survival-setup')}
+          activeOpacity={0.9}
+        >
+          <View style={[styles.modeIconBg, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+            <Feather name="activity" size={24} color="#EF4444" />
+          </View>
+          <Text style={[styles.modeTitle, { color: theme.text }]}>Survival</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.statsBanner, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <View style={styles.statItem}>
-          <View style={[styles.statIconBg, { backgroundColor: theme.warningLight }]}>
-            <Feather name="zap" size={20} color={theme.warning} />
-          </View>
-          <View>
-            {streak.count > 0 ? (
-              <>
-                <Text style={[styles.statValue, { color: theme.text }]}>{streak.count} Days 🔥</Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Current Streak</Text>
-              </>
-            ) : (
-              // BUG-19 FIX: Show encouraging message for new users instead of "0 Days"
-              <>
-                <Text style={[styles.statValue, { color: theme.primary }]}>Start your streak!</Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Complete a quiz to begin 🚀</Text>
-              </>
-            )}
-          </View>
-        </View>
+      {/* Ad Banner below game modes */}
+      <View style={{ marginBottom: 28, marginTop: 12, backgroundColor: 'transparent' }}>
+        <AdBanner />
       </View>
-
-      {/* Daily Challenge CTA */}
-      <TouchableOpacity 
-        style={[styles.infiniteBanner, { backgroundColor: '#10B981', marginBottom: 16 }]} 
-        onPress={() => router.push('/daily-challenge')}
-        activeOpacity={0.9}
-      >
-        <View style={styles.infiniteContent}>
-          <View style={styles.infiniteTextContainer}>
-            <Text style={styles.infiniteTitle}>Daily Challenge</Text>
-            <Text style={styles.infiniteDesc}>Global 20-Question Gauntlet</Text>
-          </View>
-          <View style={[styles.infiniteIconBg, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Feather name="globe" size={20} color="#FFFFFF" />
-          </View>
-        </View>
-      </TouchableOpacity>
-
-      {/* Infinite Scroll CTA */}
-      <TouchableOpacity 
-        style={[styles.infiniteBanner, { backgroundColor: theme.primary, marginBottom: 16 }]} 
-        onPress={() => router.push('/infinite-setup')}
-        activeOpacity={0.9}
-      >
-        <View style={styles.infiniteContent}>
-          <View style={styles.infiniteTextContainer}>
-            <Text style={styles.infiniteTitle}>Infinite Mode</Text>
-            <Text style={styles.infiniteDesc}>Non-stop training reels</Text>
-          </View>
-          <View style={[styles.infiniteIconBg, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Feather name="play" size={20} color="#FFFFFF" />
-          </View>
-        </View>
-      </TouchableOpacity>
-
-      {/* Survival Mode CTA */}
-      <TouchableOpacity 
-        style={[styles.infiniteBanner, { backgroundColor: '#EF4444' }]} 
-        onPress={() => router.push('/survival-setup')}
-        activeOpacity={0.9}
-      >
-        <View style={styles.infiniteContent}>
-          <View style={styles.infiniteTextContainer}>
-            <Text style={styles.infiniteTitle}>Survival Mode</Text>
-            <Text style={styles.infiniteDesc}>Race against the clock</Text>
-          </View>
-          <View style={[styles.infiniteIconBg, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Feather name="clock" size={20} color="#FFFFFF" />
-          </View>
-        </View>
-      </TouchableOpacity>
 
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Practice Categories</Text>
       <View style={styles.grid}>
@@ -150,17 +132,14 @@ const styles = StyleSheet.create({
   appName: { fontSize: 30, fontWeight: '900', letterSpacing: -1 },
   tagline: { fontSize: 14, marginTop: 2 },
   settingsBtn: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
-  statsBanner: { flexDirection: 'row', borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1 },
-  statItem: { flexDirection: 'row', alignItems: 'center' },
-  statIconBg: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  statValue: { fontSize: 20, fontWeight: '800' },
-  statLabel: { fontSize: 13, fontWeight: '500' },
-  infiniteBanner: { borderRadius: 16, padding: 20, marginBottom: 28, shadowColor: '#0056D2', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
-  infiniteContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  infiniteIconBg: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', paddingLeft: 2 },
-  infiniteTextContainer: { flex: 1 },
-  infiniteTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
-  infiniteDesc: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4, fontWeight: '500' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  miniStreak: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 6 },
+  miniStreakIcon: { fontSize: 16 },
+  miniStreakText: { fontSize: 16, fontWeight: '800' },
+  modesGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: CARD_GAP },
+  modeCard: { flex: 1, borderRadius: 16, paddingVertical: 20, alignItems: 'center', borderWidth: 1, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 2 },
+  modeIconBg: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  modeTitle: { fontSize: 15, fontWeight: '800' },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP, marginBottom: 28 },
   card: { width: CARD_WIDTH, borderRadius: 16, padding: 16, borderWidth: 1 },

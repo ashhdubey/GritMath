@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme';
+import AdBanner from '../../src/components/AdBanner';
 
 export default function Revision() {
   const theme = useTheme();
@@ -186,6 +187,10 @@ export default function Revision() {
         </TouchableOpacity>
       </View>
 
+      <View style={{ marginBottom: 16, backgroundColor: 'transparent' }}>
+        <AdBanner />
+      </View>
+
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {tab === 'recommended' ? renderRecommendedContent() : (
           <View style={styles.content}>
@@ -239,6 +244,9 @@ export default function Revision() {
             </View>
           </View>
         )}
+        
+        <AdBanner />
+        
         <View style={{ height: 120 }} />
       </ScrollView>
     </View>

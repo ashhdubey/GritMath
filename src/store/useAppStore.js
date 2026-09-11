@@ -190,10 +190,8 @@ const useAppStore = create((set, get) => ({
     let newQuestions = quiz.questions;
 
     // BUG FIX: Survival mode ends immediately on first wrong answer
-    if (quizConfig.isSurvival && !correct) {
-      isFinished = true;
-    }
-
+    // REMOVED: Survival mode should only end when time is up.
+    
     if (!isFinished && (quizConfig.isInfinite || quizConfig.isSurvival)) {
       // If infinite mode and not at limit, generate and append another question immutably
       if (!quizConfig.infiniteLimit || nextIndex < quizConfig.infiniteLimit) {
@@ -207,6 +205,12 @@ const useAppStore = create((set, get) => ({
       get().saveQuizStats(quizConfig, quiz.questions.length, newScore, newAnswers);
     }
 
+    let newTimeRemaining = quizConfig.isSurvival ? quiz.timeRemaining : quizConfig.timePerQuestion;
+    if (quizConfig.isSurvival && userAnswer !== null) {
+      newTimeRemaining = correct ? quiz.timeRemaining + 2 : quiz.timeRemaining - 3;
+      newTimeRemaining = Math.max(0, newTimeRemaining);
+    }
+
     set({
       quiz: {
         ...quiz,
@@ -215,7 +219,7 @@ const useAppStore = create((set, get) => ({
         answers: newAnswers,
         currentIndex: isFinished ? quiz.currentIndex : nextIndex,
         isFinished,
-        timeRemaining: isFinished ? 0 : (quizConfig.isSurvival ? Math.min(quiz.timeRemaining + 3, quizConfig.timePerQuestion) : quizConfig.timePerQuestion),
+        timeRemaining: isFinished ? 0 : newTimeRemaining,
       },
     });
   },
@@ -242,11 +246,15 @@ const useAppStore = create((set, get) => ({
   },
 
   /**
-   * Called on timer expiry – auto‑skip the current question.
+   * Called on timer expiry – auto‑skip the current question or end survival.
    */
   timeUp: () => {
-    const { submitAnswer } = get();
-    submitAnswer(null, get().quizConfig.timePerQuestion);
+    const { submitAnswer, manuallyFinishQuiz, quizConfig } = get();
+    if (quizConfig.isSurvival) {
+      manuallyFinishQuiz();
+    } else {
+      submitAnswer(null, quizConfig.timePerQuestion);
+    }
   },
 
   /**
@@ -260,17 +268,6 @@ const useAppStore = create((set, get) => ({
         // Time expired – will be handled by the component calling timeUp
         return { quiz: { ...state.quiz, timeRemaining: 0 } };
       }
-      return { quiz: { ...state.quiz, timeRemaining: newTime } };
-    });
-  },
-
-  /**
-   * Survival Mode: Add or subtract time
-   */
-  survivalAddTime: (delta) => {
-    set((state) => {
-      if (!state.quiz.isActive || state.quiz.isFinished) return state;
-      const newTime = Math.max(0, state.quiz.timeRemaining + delta);
       return { quiz: { ...state.quiz, timeRemaining: newTime } };
     });
   },

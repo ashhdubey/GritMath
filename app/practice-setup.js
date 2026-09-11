@@ -65,7 +65,7 @@ export default function PracticeSetup() {
 
       <View style={styles.headerRow}>
         <View style={[styles.catBadge, { backgroundColor: theme.primaryLight }]}>
-          <Feather name={catInfo.featherIcon || 'hash'} size={24} color={theme.primary} />
+          <Text style={{ fontSize: 24, fontWeight: '800', color: theme.primary }}>{catInfo.icon || '#'}</Text>
         </View>
         <Text style={[styles.title, { color: theme.text }]}>{catInfo.label} Practice</Text>
       </View>
