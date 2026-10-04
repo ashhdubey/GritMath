@@ -1,49 +1,60 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../src/theme';
 import AdBanner from '../../src/components/AdBanner';
+import useAppStore from '../../src/store/useAppStore';
+import { generateSequentialRevision } from '../../src/engine/MathEngine';
 
 export default function Revision() {
   const theme = useTheme();
-  const [tab, setTab] = useState('recommended'); // 'recommended' | 'manual'
+  const router = useRouter();
+  const { startRevisionQuiz } = useAppStore();
   
-  // Recommended nested state
+  const [tab, setTab] = useState('recommended'); // 'recommended' | 'daily_revision'
   const [selectedRec, setSelectedRec] = useState(null);
 
-  // Manual state
-  const [manualType, setManualType] = useState('table'); // 'table' | 'square' | 'cube' | 'square_root' | 'cube_root' | 'percentage'
-  const [fromVal, setFromVal] = useState('2');
-  const [toVal, setToVal] = useState('10');
-  const [generatedList, setGeneratedList] = useState([]);
-  const [generateError, setGenerateError] = useState('');
+  // Daily Revision state
+  const [revTables, setRevTables] = useState({ enabled: true, min: '2', max: '20' });
+  const [revSquares, setRevSquares] = useState({ enabled: false, min: '2', max: '25' });
+  const [revCubes, setRevCubes] = useState({ enabled: false, min: '2', max: '15' });
+  const [revError, setRevError] = useState('');
 
-  const handleGenerate = () => {
-    const from = parseInt(fromVal, 10);
-    const to = parseInt(toVal, 10);
-    // BUG-15 FIX: Show error instead of silently failing
-    if (isNaN(from) || isNaN(to) || from > to || from < 1) {
-      setGenerateError('From must be ≤ To and both must be positive numbers.');
-      return;
+  const handleStartDailyRevision = () => {
+    const selections = {};
+    
+    if (revTables.enabled) {
+      const min = parseInt(revTables.min, 10);
+      const max = parseInt(revTables.max, 10);
+      if (isNaN(min) || isNaN(max) || min > max || min < 1) return setRevError('Invalid Tables range');
+      selections.tables = { min, max };
     }
-    setGenerateError('');
+    
+    if (revSquares.enabled) {
+      const min = parseInt(revSquares.min, 10);
+      const max = parseInt(revSquares.max, 10);
+      if (isNaN(min) || isNaN(max) || min > max || min < 1) return setRevError('Invalid Squares range');
+      selections.squares = { min, max };
+    }
 
-    const results = [];
-    for (let i = from; i <= to; i++) {
-      if (manualType === 'square') results.push({ id: i, label: `${i}² = ${i * i}` });
-      else if (manualType === 'cube') results.push({ id: i, label: `${i}³ = ${i * i * i}` });
-      else if (manualType === 'square_root') results.push({ id: i, label: `√${i * i} = ${i}` });
-      else if (manualType === 'cube_root') results.push({ id: i, label: `∛${i * i * i} = ${i}` });
-      else if (manualType === 'percentage') {
-        const percStr = Array.from({length: 10}, (_, idx) => `${(idx + 1) * 10}% of ${i} = ${(i * ((idx + 1) * 10)) / 100}`).join('\n');
-        results.push({ id: i, label: `Percentages of ${i}:\n${percStr}` });
-      }
-      else {
-        const tableStr = Array.from({length: 10}, (_, idx) => `${i} × ${idx + 1} = ${i * (idx + 1)}`).join('\n');
-        results.push({ id: i, label: `Table of ${i}:\n${tableStr}` });
-      }
+    if (revCubes.enabled) {
+      const min = parseInt(revCubes.min, 10);
+      const max = parseInt(revCubes.max, 10);
+      if (isNaN(min) || isNaN(max) || min > max || min < 1) return setRevError('Invalid Cubes range');
+      selections.cubes = { min, max };
     }
-    setGeneratedList(results);
+
+    if (Object.keys(selections).length === 0) {
+      return setRevError('Please select at least one category to revise.');
+    }
+
+    setRevError('');
+    const questions = generateSequentialRevision(selections);
+    
+    startRevisionQuiz(questions);
+
+    router.push('/daily-revision-quiz');
   };
 
   const renderRecommendedContent = () => {
@@ -166,6 +177,80 @@ export default function Revision() {
     );
   };
 
+  const renderDailyRevision = () => (
+    <View style={styles.content}>
+      <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 8 }]}>Daily Writing Practice</Text>
+      <Text style={{ color: theme.textSecondary, marginBottom: 20 }}>Revise your math tables, squares, and cubes sequentially.</Text>
+
+      {/* Tables Card */}
+      <View style={[styles.revCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={styles.revCardHeader}>
+          <Text style={[styles.revCardTitle, { color: theme.text }]}>Multiplication Tables</Text>
+          <Switch 
+            value={revTables.enabled} 
+            onValueChange={v => setRevTables(prev => ({...prev, enabled: v}))} 
+            trackColor={{ false: theme.border, true: theme.primary }}
+          />
+        </View>
+        {revTables.enabled && (
+          <View style={styles.revInputRow}>
+            <Text style={{ color: theme.textSecondary }}>From</Text>
+            <TextInput style={[styles.revInput, { borderColor: theme.border, color: theme.text }]} value={revTables.min} onChangeText={v => setRevTables(prev => ({...prev, min: v}))} keyboardType="number-pad" />
+            <Text style={{ color: theme.textSecondary }}>To</Text>
+            <TextInput style={[styles.revInput, { borderColor: theme.border, color: theme.text }]} value={revTables.max} onChangeText={v => setRevTables(prev => ({...prev, max: v}))} keyboardType="number-pad" />
+          </View>
+        )}
+      </View>
+
+      {/* Squares Card */}
+      <View style={[styles.revCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={styles.revCardHeader}>
+          <Text style={[styles.revCardTitle, { color: theme.text }]}>Squares</Text>
+          <Switch 
+            value={revSquares.enabled} 
+            onValueChange={v => setRevSquares(prev => ({...prev, enabled: v}))} 
+            trackColor={{ false: theme.border, true: theme.primary }}
+          />
+        </View>
+        {revSquares.enabled && (
+          <View style={styles.revInputRow}>
+            <Text style={{ color: theme.textSecondary }}>From</Text>
+            <TextInput style={[styles.revInput, { borderColor: theme.border, color: theme.text }]} value={revSquares.min} onChangeText={v => setRevSquares(prev => ({...prev, min: v}))} keyboardType="number-pad" />
+            <Text style={{ color: theme.textSecondary }}>To</Text>
+            <TextInput style={[styles.revInput, { borderColor: theme.border, color: theme.text }]} value={revSquares.max} onChangeText={v => setRevSquares(prev => ({...prev, max: v}))} keyboardType="number-pad" />
+          </View>
+        )}
+      </View>
+
+      {/* Cubes Card */}
+      <View style={[styles.revCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={styles.revCardHeader}>
+          <Text style={[styles.revCardTitle, { color: theme.text }]}>Cubes</Text>
+          <Switch 
+            value={revCubes.enabled} 
+            onValueChange={v => setRevCubes(prev => ({...prev, enabled: v}))} 
+            trackColor={{ false: theme.border, true: theme.primary }}
+          />
+        </View>
+        {revCubes.enabled && (
+          <View style={styles.revInputRow}>
+            <Text style={{ color: theme.textSecondary }}>From</Text>
+            <TextInput style={[styles.revInput, { borderColor: theme.border, color: theme.text }]} value={revCubes.min} onChangeText={v => setRevCubes(prev => ({...prev, min: v}))} keyboardType="number-pad" />
+            <Text style={{ color: theme.textSecondary }}>To</Text>
+            <TextInput style={[styles.revInput, { borderColor: theme.border, color: theme.text }]} value={revCubes.max} onChangeText={v => setRevCubes(prev => ({...prev, max: v}))} keyboardType="number-pad" />
+          </View>
+        )}
+      </View>
+
+      {revError ? <Text style={{ color: theme.danger || '#EF4444', marginBottom: 12, fontWeight: '600' }}>⚠ {revError}</Text> : null}
+
+      <TouchableOpacity style={[styles.startBtn, { backgroundColor: theme.primary }]} onPress={handleStartDailyRevision}>
+        <Text style={styles.startText}>Start Daily Revision</Text>
+        <Feather name="arrow-right" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
@@ -177,13 +262,13 @@ export default function Revision() {
           style={[styles.tabBtn, tab === 'recommended' && { backgroundColor: theme.surface, shadowColor: '#000', elevation: 2, shadowOpacity: 0.1, shadowRadius: 4 }]} 
           onPress={() => { setTab('recommended'); setSelectedRec(null); }}
         >
-          <Text style={[styles.tabText, tab === 'recommended' ? { color: theme.text } : { color: theme.textSecondary }]}>Recommended</Text>
+          <Text style={[styles.tabText, tab === 'recommended' ? { color: theme.text } : { color: theme.textSecondary }]}>Reference</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={[styles.tabBtn, tab === 'manual' && { backgroundColor: theme.surface, shadowColor: '#000', elevation: 2, shadowOpacity: 0.1, shadowRadius: 4 }]} 
-          onPress={() => setTab('manual')}
+          style={[styles.tabBtn, tab === 'daily_revision' && { backgroundColor: theme.surface, shadowColor: '#000', elevation: 2, shadowOpacity: 0.1, shadowRadius: 4 }]} 
+          onPress={() => setTab('daily_revision')}
         >
-          <Text style={[styles.tabText, tab === 'manual' ? { color: theme.text } : { color: theme.textSecondary }]}>Manual</Text>
+          <Text style={[styles.tabText, tab === 'daily_revision' ? { color: theme.text } : { color: theme.textSecondary }]}>Daily Revision</Text>
         </TouchableOpacity>
       </View>
 
@@ -192,61 +277,8 @@ export default function Revision() {
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {tab === 'recommended' ? renderRecommendedContent() : (
-          <View style={styles.content}>
-            <View style={styles.typeSelector}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                {[{id: 'table', label: 'TABLE'}, {id: 'square', label: 'SQUARE'}, {id: 'cube', label: 'CUBE'}, {id: 'square_root', label: 'SQ ROOT'}, {id: 'cube_root', label: 'CB ROOT'}, {id: 'percentage', label: 'PERCENT'}].map(t => (
-                  <TouchableOpacity 
-                    key={t.id}
-                    style={[styles.typeBtn, { borderColor: theme.border, paddingHorizontal: 16 }, manualType === t.id && { borderColor: theme.primary, backgroundColor: theme.primaryLight }]}
-                    onPress={() => setManualType(t.id)}
-                  >
-                    <Text style={[styles.typeText, manualType === t.id ? { color: theme.primary } : { color: theme.textSecondary }]}>{t.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
-            <View style={styles.inputRow}>
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>From:</Text>
-                <TextInput 
-                  style={[styles.input, { borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }]} 
-                  value={fromVal} 
-                  onChangeText={setFromVal} 
-                  keyboardType="number-pad" 
-                />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>To:</Text>
-                <TextInput 
-                  style={[styles.input, { borderColor: theme.border, color: theme.text, backgroundColor: theme.surface }]} 
-                  value={toVal} 
-                  onChangeText={setToVal} 
-                  keyboardType="number-pad" 
-                />
-              </View>
-            </View>
-            <TouchableOpacity style={[styles.generateBtn, { backgroundColor: theme.primary }]} onPress={handleGenerate}>
-              <Text style={styles.generateText}>Generate</Text>
-            </TouchableOpacity>
-            {generateError ? (
-              <Text style={{ color: theme.danger || '#EF4444', fontSize: 13, marginTop: 8, fontWeight: '600' }}>⚠ {generateError}</Text>
-            ) : null}
-
-            <View style={styles.resultsArea}>
-              {generatedList.map((res) => (
-                <View key={res.id} style={[styles.resultCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.resultText, { color: theme.text }]}>{res.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-        
+        {tab === 'recommended' ? renderRecommendedContent() : renderDailyRevision()}
         <AdBanner />
-        
         <View style={{ height: 120 }} />
       </ScrollView>
     </View>
@@ -272,18 +304,13 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   gridItem: { width: '31%', padding: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1 },
   gridText: { fontSize: 15, fontWeight: '700' },
-  
-  typeSelector: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  typeBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
-  typeText: { fontSize: 13, fontWeight: '700' },
-  
-  inputRow: { flexDirection: 'row', gap: 16, marginBottom: 20 },
-  inputGroup: { flex: 1 },
-  inputLabel: { marginBottom: 8, fontSize: 14, fontWeight: '600' },
-  input: { borderRadius: 12, borderWidth: 1, padding: 16, fontSize: 18, fontWeight: '700' },
-  generateBtn: { paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginBottom: 20 },
-  generateText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
-  resultsArea: { gap: 12 },
-  resultCard: { padding: 16, borderRadius: 12, borderWidth: 1 },
-  resultText: { fontSize: 16, fontWeight: '600', lineHeight: 24 },
+
+  revCard: { padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 16 },
+  revCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  revCardTitle: { fontSize: 18, fontWeight: '700' },
+  revInputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, gap: 12 },
+  revInput: { flex: 1, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, fontWeight: '600' },
+
+  startBtn: { marginTop: 16, paddingVertical: 16, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#0056D2', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
+  startText: { color: '#FFF', fontSize: 18, fontWeight: '800' }
 });

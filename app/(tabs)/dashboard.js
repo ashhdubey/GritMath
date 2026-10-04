@@ -1,77 +1,103 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { CATEGORIES } from '../../src/engine/MathEngine';
-import { getTotalSolved, getStreak, getQuizHistory, getCategoryStats, getDailyActiveTime } from '../../src/storage/storage';
-import { getUnlockedBadges, BADGES } from '../../src/badges';
+import { getTotalSolved, getStreak, getDashboardStats } from '../../src/storage/storage';
 import { useTheme } from '../../src/theme';
 import AdBanner from '../../src/components/AdBanner';
+import { PieChart } from 'react-native-chart-kit';
+
+const screenWidth = Dimensions.get('window').width;
 
 export default function Dashboard() {
   const theme = useTheme();
   const [totalSolved, setTotalSolved] = useState(0);
   const [streakData, setStreakData] = useState({ count: 0, max: 0, lastDate: null });
-  const [recentQuizzes, setRecentQuizzes] = useState([]);
-  const [categoryStats, setCategoryStats] = useState({});
-  const [activeTimes, setActiveTimes] = useState({});
-  const [unlockedBadges, setUnlockedBadges] = useState([]);
-  
-  // For Monthly Calendar Heatmap
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDayMinutes, setSelectedDayMinutes] = useState(null);
+  const [timeRange, setTimeRange] = useState('today');
+  const [dashboardStats, setDashboardStats] = useState(null);
 
   useFocusEffect(useCallback(() => {
     setTotalSolved(getTotalSolved());
     setStreakData(getStreak());
-    setRecentQuizzes(getQuizHistory().slice(0, 10)); // fetch up to 10 for trends
-    setCategoryStats(getCategoryStats());
-    setActiveTimes(getDailyActiveTime());
-    setUnlockedBadges(getUnlockedBadges());
-  }, []));
+    setDashboardStats(getDashboardStats(timeRange));
+  }, [timeRange]));
 
-  // Generate Calendar Days for currentMonth
-  const generateMonthDays = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay(); // 0 (Sun) to 6 (Sat)
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const renderPerformanceGrid = () => {
+    if (!dashboardStats) return null;
+    const { total, correct, wrong, skipped } = dashboardStats.performance;
+    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+    return (
+      <View style={styles.perfGrid}>
+        <View style={[styles.perfCard, { backgroundColor: theme.surface, borderColor: theme.border, width: '48%' }]}>
+          <Text style={[styles.perfValue, { color: theme.text }]}>{total}</Text>
+          <Text style={[styles.perfLabel, { color: theme.textSecondary }]}>Total</Text>
+        </View>
+        <View style={[styles.perfCard, { backgroundColor: theme.surface, borderColor: theme.border, width: '48%' }]}>
+          <Text style={[styles.perfValue, { color: theme.primary }]}>{accuracy}%</Text>
+          <Text style={[styles.perfLabel, { color: theme.textSecondary }]}>Accuracy</Text>
+        </View>
+        <View style={[styles.perfCard, { backgroundColor: theme.surface, borderColor: theme.border, width: '31%' }]}>
+          <Text style={[styles.perfValue, { color: theme.success }]}>{correct}</Text>
+          <Text style={[styles.perfLabel, { color: theme.textSecondary }]}>Correct</Text>
+        </View>
+        <View style={[styles.perfCard, { backgroundColor: theme.surface, borderColor: theme.border, width: '31%' }]}>
+          <Text style={[styles.perfValue, { color: theme.danger }]}>{wrong}</Text>
+          <Text style={[styles.perfLabel, { color: theme.textSecondary }]}>Wrong</Text>
+        </View>
+        <View style={[styles.perfCard, { backgroundColor: theme.surface, borderColor: theme.border, width: '31%' }]}>
+          <Text style={[styles.perfValue, { color: theme.warning }]}>{skipped}</Text>
+          <Text style={[styles.perfLabel, { color: theme.textSecondary }]}>Skipped</Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderPieChart = () => {
+    if (!dashboardStats) return null;
+    const { endless, survival } = dashboardStats.moduleAcc;
+
+    const data = [
+      {
+        name: 'Endless',
+        population: Math.round(endless) || 0, // Fallback if no data
+        color: theme.primary,
+        legendFontColor: theme.text,
+        legendFontSize: 14,
+      },
+      {
+        name: 'Survival',
+        population: Math.round(survival) || 0, // Fallback if no data
+        color: theme.danger || '#EF4444',
+        legendFontColor: theme.text,
+        legendFontSize: 14,
+      }
+    ];
     
-    const days = [];
-    // Empty slots for alignment
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null);
+    // If both are 0, chart might throw error or look empty
+    if (data[0].population === 0 && data[1].population === 0) {
+      data[0].population = 1; // Fake data just to show empty chart
+      data[1].population = 1;
+      data[0].color = theme.border;
+      data[1].color = theme.border;
     }
-    // Actual days
-    for (let i = 1; i <= daysInMonth; i++) {
-      const mStr = String(month + 1).padStart(2, '0');
-      const dStr = String(i).padStart(2, '0');
-      const fullDateStr = `${year}-${mStr}-${dStr}`;
-      days.push({
-        date: fullDateStr,
-        dayNum: i,
-        minutes: activeTimes[fullDateStr] || 0
-      });
-    }
-    return days;
-  };
-  
-  const calendarDays = generateMonthDays();
-  const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-  const prevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-    setSelectedDayMinutes(null);
-  };
-  
-  // BUG-17 FIX: Prevent navigating beyond the current month
-  const now = new Date();
-  const isCurrentMonth = currentMonth.getFullYear() === now.getFullYear() && currentMonth.getMonth() === now.getMonth();
-  
-  const nextMonth = () => {
-    if (isCurrentMonth) return; // don't allow future months
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-    setSelectedDayMinutes(null);
+    return (
+      <View style={[styles.chartContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <PieChart
+          data={data}
+          width={screenWidth - 40}
+          height={200}
+          chartConfig={{
+            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+          }}
+          accessor={"population"}
+          backgroundColor={"transparent"}
+          paddingLeft={"15"}
+          absolute
+        />
+      </View>
+    );
   };
 
   return (
@@ -81,229 +107,69 @@ export default function Dashboard() {
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Your performance metrics</Text>
       </View>
 
-      {/* Monthly Activity Heatmap */}
-      <View style={styles.section}>
-        <View style={styles.heatmapContainer}>
-          <View style={styles.heatmapHeader}>
-            <TouchableOpacity onPress={prevMonth} style={styles.monthNav}>
-              <Feather name="chevron-left" size={20} color={theme.text} />
-            </TouchableOpacity>
-            <Text style={[styles.monthText, { color: theme.text }]}>{monthName}</Text>
-            <TouchableOpacity onPress={nextMonth} style={[styles.monthNav, isCurrentMonth && { opacity: 0.3 }]} disabled={isCurrentMonth}>
-              <Feather name="chevron-right" size={20} color={theme.text} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.calendarGrid}>
-            {['S','M','T','W','T','F','S'].map((day, i) => (
-              <Text key={`header-${i}`} style={[styles.dayHeader, { color: theme.textSecondary }]}>{day}</Text>
-            ))}
-            
-            {calendarDays.map((dayObj, i) => {
-              if (!dayObj) return <View key={`empty-${i}`} style={styles.calendarCell} />;
-              
-              let opacity = 0.1;
-              if (dayObj.minutes >= 15) opacity = 1;
-              else if (dayObj.minutes >= 10) opacity = 0.7;
-              else if (dayObj.minutes >= 5) opacity = 0.4;
-              else if (dayObj.minutes > 0) opacity = 0.2;
-              
-              const isSelected = selectedDayMinutes?.date === dayObj.date;
-
-              return (
-                <TouchableOpacity 
-                  key={dayObj.date} 
-                  style={styles.calendarCell}
-                  onPress={() => setSelectedDayMinutes(dayObj)}
-                >
-                  <View style={[
-                    styles.heatmapBlock, 
-                    { 
-                      backgroundColor: dayObj.minutes > 0 ? theme.primary : theme.border,
-                      opacity: dayObj.minutes > 0 ? opacity : 0.5,
-                      borderWidth: isSelected ? 2 : 0,
-                      borderColor: theme.text
-                    }
-                  ]} />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          
-          {selectedDayMinutes && (() => {
-            const d = new Date(selectedDayMinutes.date + 'T00:00:00'); // local parse
-            const label = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
-            return (
-              <Text style={[styles.selectedDayText, { color: theme.text }]}>
-                {label} · {Math.round(selectedDayMinutes.minutes)} min{selectedDayMinutes.minutes !== 1 ? 's' : ''} active
-              </Text>
-            );
-          })()}
-        </View>
-      </View>
-
       <View style={styles.metricRow}>
         <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={[styles.iconBg, { backgroundColor: theme.primaryLight }]}>
             <Feather name="check-circle" size={24} color={theme.primary} />
           </View>
           <Text style={[styles.metricValue, { color: theme.text }]}>{totalSolved}</Text>
-          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Total Solved</Text>
+          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Total (All Time)</Text>
         </View>
 
         <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <View style={[styles.iconBg, { backgroundColor: theme.warningLight }]}>
-            <Feather name="zap" size={24} color={theme.warning} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={[styles.iconBg, { backgroundColor: theme.warningLight, width: 36, height: 36, marginBottom: 0, marginRight: 12 }]}>
+              <Feather name="zap" size={18} color={theme.warning} />
+            </View>
+            <Text style={[styles.metricLabel, { color: theme.textSecondary, fontSize: 16 }]}>Streak</Text>
           </View>
-          <Text style={[styles.metricValue, { color: theme.text }]}>{streakData.max || 0}</Text>
-          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Max Streak</Text>
+          
+          <View style={{ flex: 1, flexDirection: 'column' }}>
+            <View style={{ flex: 1, borderBottomWidth: 1, borderBottomColor: theme.border, justifyContent: 'center' }}>
+              <Text style={{ fontSize: 13, color: theme.textSecondary }}>Max Streak</Text>
+              <Text style={[styles.metricValue, { color: theme.text, fontSize: 22, marginTop: 2 }]}>{streakData.max || 0} <Text style={{ fontSize: 14 }}>days</Text></Text>
+            </View>
+            <View style={{ flex: 1, justifyContent: 'center', paddingTop: 8 }}>
+              <Text style={{ fontSize: 13, color: theme.textSecondary }}>Current Streak</Text>
+              <Text style={[styles.metricValue, { color: theme.text, fontSize: 22, marginTop: 2 }]}>{streakData.count || 0} <Text style={{ fontSize: 14 }}>days</Text></Text>
+            </View>
+          </View>
         </View>
       </View>
 
-      {/* Badges Section */}
-      <View style={{ marginBottom: 32, backgroundColor: 'transparent' }}>
-        <AdBanner />
+      <View style={styles.section}>
+        <View style={[styles.sectionHeader, { flexDirection: 'row', alignItems: 'center' }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Performance</Text>
+          <TouchableOpacity onPress={() => Alert.alert("Performance Tracking", "Performance tracking dynamically aggregates your Endless and Survival mode scores across the selected time range.\n\n(Revision and Practice modes are excluded)")} style={{ marginLeft: 8 }}>
+            <Feather name="info" size={16} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={[styles.filterRow, { backgroundColor: theme.border }]}>
+          {['today', 'week', 'month', 'overall'].map(range => (
+            <TouchableOpacity 
+              key={range} 
+              style={[styles.filterBtn, timeRange === range && { backgroundColor: theme.surface, shadowColor: '#000', elevation: 2, shadowOpacity: 0.1, shadowRadius: 4 }]}
+              onPress={() => setTimeRange(range)}
+            >
+              <Text style={[styles.filterText, { color: timeRange === range ? theme.text : theme.textSecondary }]}>
+                {range.charAt(0).toUpperCase() + range.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {renderPerformanceGrid()}
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Achievements</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Module-wise Stats (Accuracy)</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgeScroll}>
-          {BADGES.map(badge => {
-            const isUnlocked = unlockedBadges.includes(badge.id);
-            return (
-              <View key={badge.id} style={[styles.badgeCard, { backgroundColor: theme.surface, borderColor: isUnlocked ? badge.color : theme.border }]}>
-                <View style={[styles.badgeIconBg, { backgroundColor: isUnlocked ? badge.color + '20' : theme.background }]}>
-                  <Feather name={badge.icon} size={24} color={isUnlocked ? badge.color : theme.textSecondary} />
-                </View>
-                <Text style={[styles.badgeName, { color: isUnlocked ? theme.text : theme.textSecondary }]}>{badge.name}</Text>
-                <Text style={[styles.badgeDesc, { color: theme.textSecondary }]} numberOfLines={2}>{badge.desc}</Text>
-              </View>
-            );
-          })}
-        </ScrollView>
+        {renderPieChart()}
       </View>
 
-      {/* Progress Trends Chart (Last 10 Quizzes) */}
-      {recentQuizzes.length > 2 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Accuracy Trends</Text>
-          </View>
-          <View style={[styles.trendContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendScroll}>
-              {recentQuizzes.slice().reverse().map((q, i) => {
-                const pct = Math.round((q.score / q.total) * 100);
-                const barColor = pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger;
-                return (
-                  <View key={i} style={styles.trendCol}>
-                    <Text style={[styles.trendPctText, { color: theme.textSecondary }]}>{pct}%</Text>
-                    <View style={[styles.trendTrack, { backgroundColor: theme.background }]}>
-                      <View style={[styles.trendFill, { height: `${pct}%`, backgroundColor: barColor }]} />
-                    </View>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      )}
-
-      {/* Category Mastery Chart */}
-      {Object.keys(categoryStats).length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Category Mastery</Text>
-          </View>
-          <View style={[styles.chartContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            {Object.entries(categoryStats).map(([catKey, stats], i) => {
-              const catInfo = CATEGORIES.find((c) => c.key === catKey);
-              const pct = stats.attempted > 0 ? Math.round((stats.correct / stats.attempted) * 100) : 0;
-              const barColor = pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger;
-              return (
-                <View key={i} style={styles.chartCol}>
-                  <Text style={[styles.chartPctText, { color: theme.textSecondary }]}>{pct}%</Text>
-                  <View style={[styles.chartTrack, { backgroundColor: theme.background }]}>
-                    <View style={[styles.chartFill, { height: `${pct}%`, backgroundColor: barColor }]} />
-                  </View>
-                  <Text style={[styles.mathIconSmall, { color: theme.textSecondary, marginTop: 8 }]}>{catInfo?.icon || '#'}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
-
-      {recentQuizzes.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Activity</Text>
-          </View>
-          <View style={[styles.listContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            {recentQuizzes.map((quiz, i) => {
-              const pct = Math.round((quiz.score / quiz.total) * 100);
-              // BUG-11 FIX: category can be an array in infinite mode
-              const catKey = Array.isArray(quiz.category) ? null : quiz.category;
-              const catInfo = catKey ? CATEGORIES.find((c) => c.key === catKey) : null;
-              const catLabel = catInfo ? catInfo.label : (Array.isArray(quiz.category) ? 'Mixed' : quiz.category);
-              const catIcon = catInfo ? catInfo.icon : '∞';
-              const isLast = i === recentQuizzes.length - 1;
-              return (
-                <View key={i} style={[styles.listItem, !isLast && { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
-                  <View style={[styles.catIconBg, { backgroundColor: theme.background }]}>
-                    <Text style={[styles.mathIconMedium, { color: theme.primary }]}>{catIcon}</Text>
-                  </View>
-                  <View style={styles.listInfo}>
-                    <Text style={[styles.listCategory, { color: theme.text }]}>{catLabel}</Text>
-                    <Text style={[styles.listMeta, { color: theme.textSecondary }]}>{quiz.score}/{quiz.total} • {quiz.difficulty}</Text>
-                  </View>
-                  <Text style={[styles.listPct, { color: pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger }]}>{pct}%</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
-
-      {Object.keys(categoryStats).length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Speed Analytics</Text>
-          </View>
-          <View style={[styles.listContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            {Object.entries(categoryStats).map(([catKey, stats], i) => {
-              const catInfo = CATEGORIES.find((c) => c.key === catKey);
-              const pct = stats.attempted > 0 ? Math.round((stats.correct / stats.attempted) * 100) : 0;
-              const avgSpeed = stats.attempted > 0 ? (stats.totalTime / stats.attempted).toFixed(1) : '0.0';
-              const isLast = i === Object.keys(categoryStats).length - 1;
-              return (
-                <View key={i} style={[styles.listItem, !isLast && { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
-                  <View style={[styles.catIconBg, { backgroundColor: theme.background }]}>
-                    <Text style={[styles.mathIconMedium, { color: theme.primary }]}>{catInfo?.icon || '#'}</Text>
-                  </View>
-                  <View style={styles.listInfo}>
-                    <Text style={[styles.listCategory, { color: theme.text }]}>{catInfo?.label || catKey}</Text>
-                    <Text style={[styles.listMeta, { color: theme.textSecondary }]}>{avgSpeed}s / question</Text>
-                  </View>
-                  <Text style={[styles.listPct, { color: pct >= 80 ? theme.success : pct >= 50 ? theme.warning : theme.danger }]}>{pct}%</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
-      
-      {totalSolved === 0 && (
-        <View style={styles.emptyState}>
-          <Text style={[styles.emptyIcon, { color: theme.textSecondary }]}>🚀</Text>
-          <Text style={[styles.emptyTitle, { color: theme.text }]}>Welcome to GritMath!</Text>
-          <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>Play your first quiz in the Practice tab to start seeing your performance metrics here.</Text>
-        </View>
-      )}
-
       <AdBanner />
-
       <View style={{ height: 120 }} />
     </ScrollView>
   );
@@ -314,55 +180,25 @@ const styles = StyleSheet.create({
   header: { paddingTop: 60, paddingBottom: 24 },
   title: { fontSize: 32, fontWeight: '800', letterSpacing: -1 },
   subtitle: { fontSize: 16, marginTop: 4 },
+  
   metricRow: { flexDirection: 'row', gap: 16, marginBottom: 32 },
   metricCard: { flex: 1, borderRadius: 20, padding: 20, borderWidth: 1 },
   iconBg: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   metricValue: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
-  metricLabel: { fontSize: 13, fontWeight: '500' },
+  metricLabel: { fontSize: 13, fontWeight: '600' },
+  
   section: { marginBottom: 32 },
   sectionHeader: { marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
   
-  badgeScroll: { overflow: 'visible' },
-  badgeCard: { width: 140, padding: 16, borderRadius: 16, borderWidth: 1, marginRight: 12, alignItems: 'center' },
-  badgeIconBg: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  badgeName: { fontSize: 15, fontWeight: '700', marginBottom: 4, textAlign: 'center' },
-  badgeDesc: { fontSize: 11, textAlign: 'center', lineHeight: 16 },
+  filterRow: { flexDirection: 'row', borderRadius: 12, padding: 4, marginBottom: 16 },
+  filterBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
+  filterText: { fontSize: 13, fontWeight: '700' },
 
-  trendContainer: { borderRadius: 20, borderWidth: 1, padding: 20, height: 180 },
-  trendScroll: { alignItems: 'flex-end', gap: 16, paddingHorizontal: 4 },
-  trendCol: { alignItems: 'center', width: 30 },
-  trendTrack: { width: 16, height: 100, borderRadius: 8, justifyContent: 'flex-end', overflow: 'hidden' },
-  trendFill: { width: '100%', borderRadius: 8 },
-  trendPctText: { fontSize: 10, fontWeight: '700', marginBottom: 8 },
+  perfGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
+  perfCard: { padding: 16, borderRadius: 16, borderWidth: 1, alignItems: 'center' },
+  perfValue: { fontSize: 24, fontWeight: '800', marginBottom: 4 },
+  perfLabel: { fontSize: 12, fontWeight: '600' },
 
-  chartContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', borderRadius: 20, borderWidth: 1, padding: 20, height: 200 },
-  chartCol: { alignItems: 'center', flex: 1 },
-  chartTrack: { width: 12, height: 100, borderRadius: 6, justifyContent: 'flex-end', overflow: 'hidden' },
-  chartFill: { width: '100%', borderRadius: 6 },
-  chartPctText: { fontSize: 10, fontWeight: '600', marginBottom: 6 },
-  mathIconSmall: { fontSize: 14, fontWeight: '800' },
-  mathIconMedium: { fontSize: 18, fontWeight: '800' },
-
-  heatmapContainer: { borderRadius: 20, paddingVertical: 12 },
-  heatmapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 8 },
-  monthText: { fontSize: 18, fontWeight: '700' },
-  monthNav: { padding: 4 },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  dayHeader: { width: '13%', textAlign: 'center', fontSize: 12, fontWeight: '600', marginBottom: 8 },
-  calendarCell: { width: '13%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  heatmapBlock: { width: 24, height: 24, borderRadius: 6 },
-  selectedDayText: { textAlign: 'center', marginTop: 12, fontSize: 14, fontWeight: '600' },
-
-  listContainer: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
-  listItem: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-  catIconBg: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-  listInfo: { flex: 1 },
-  listCategory: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
-  listMeta: { fontSize: 13, fontWeight: '500' },
-  listPct: { fontSize: 16, fontWeight: '700' },
-  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 40, paddingHorizontal: 20 },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
-  emptySubtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  chartContainer: { borderRadius: 20, borderWidth: 1, paddingVertical: 20, alignItems: 'center', overflow: 'hidden' }
 });

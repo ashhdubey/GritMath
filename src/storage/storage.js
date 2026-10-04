@@ -58,6 +58,7 @@ const KEYS = {
   NOTIFS_TIME: 'notifsTime', // e.g. "20:00"
   AUTO_UPDATE_ENABLED: 'autoUpdateEnabled',
   UPDATE_NOTIFS_ENABLED: 'updateNotifsEnabled',
+  DAILY_STATS: 'dailyStats', // Add daily stats tracking
 };
 
 // ──────────────────── Helpers ────────────────────────────
@@ -216,9 +217,30 @@ export const setOnboardingDone = () => setVal(KEYS.ONBOARDING_DONE, true);
 export const saveQuizSession = (session) => {
   let history = getVal(KEYS.QUIZ_HISTORY, []);
   if (!Array.isArray(history)) history = [];
-  history.unshift({ ...session, date: new Date().toISOString() });
+  const now = new Date();
+  history.unshift({ ...session, date: now.toISOString() });
   if (history.length > 50) history.length = 50;
   setVal(KEYS.QUIZ_HISTORY, history);
+
+  // Update daily stats for Dashboard
+  const today = toLocalDateString(now);
+  let dailyStats = getVal(KEYS.DAILY_STATS, {});
+  if (!dailyStats[today]) {
+    dailyStats[today] = {
+      endless: { total: 0, correct: 0, wrong: 0, skipped: 0 },
+      survival: { total: 0, correct: 0, wrong: 0, skipped: 0 },
+      practice: { total: 0, correct: 0, wrong: 0, skipped: 0 }
+    };
+  }
+
+  const mode = session.isSurvival ? 'survival' : (session.isInfinite ? 'endless' : 'practice');
+  
+  dailyStats[today][mode].total += (session.total || 0);
+  dailyStats[today][mode].correct += (session.correct || 0);
+  dailyStats[today][mode].wrong += (session.wrong || 0);
+  dailyStats[today][mode].skipped += (session.skipped || 0);
+
+  setVal(KEYS.DAILY_STATS, dailyStats);
 };
 
 export const getQuizHistory = () => {
@@ -246,6 +268,64 @@ export const updateCategoryStats = (category, attempted, correct, timeTaken = 0)
   setVal(KEYS.CATEGORY_STATS, stats);
 };
 
+// ──────────────────── Dashboard Stats ────────────────────
+
+export const getDashboardStats = (timeRange) => { // 'today', 'week', 'month', 'overall'
+  const stats = getVal(KEYS.DAILY_STATS, {});
+  
+  let total = 0; let correct = 0; let wrong = 0; let skipped = 0;
+  let practiceAcc = { correct: 0, total: 0 };
+  let endlessAcc = { correct: 0, total: 0 };
+  let survivalAcc = { correct: 0, total: 0 };
+
+  const now = new Date();
+  // Set time to start of day for accurate calculation
+  now.setHours(0, 0, 0, 0);
+
+  Object.keys(stats).forEach(dateStr => {
+    const [y, m, d] = dateStr.split('-');
+    const statDate = new Date(y, m - 1, d);
+    
+    const diffTime = Math.abs(now - statDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let includeInFilter = false;
+    if (timeRange === 'today' && diffDays === 0) includeInFilter = true;
+    else if (timeRange === 'week' && diffDays < 7) includeInFilter = true;
+    else if (timeRange === 'month' && diffDays < 30) includeInFilter = true;
+    else if (timeRange === 'overall') includeInFilter = true;
+
+    const dayStat = stats[dateStr];
+
+    // For performance section (Endless + Survival only)
+    if (includeInFilter) {
+      ['endless', 'survival'].forEach(mode => {
+        total += dayStat[mode].total || 0;
+        correct += dayStat[mode].correct || 0;
+        wrong += dayStat[mode].wrong || 0;
+        skipped += dayStat[mode].skipped || 0;
+      });
+    }
+
+    // For Pie chart (Overall accuracy per mode)
+    practiceAcc.correct += dayStat.practice?.correct || 0;
+    practiceAcc.total += dayStat.practice?.total || 0;
+    endlessAcc.correct += dayStat.endless?.correct || 0;
+    endlessAcc.total += dayStat.endless?.total || 0;
+    survivalAcc.correct += dayStat.survival?.correct || 0;
+    survivalAcc.total += dayStat.survival?.total || 0;
+  });
+
+  return {
+    performance: { total, correct, wrong, skipped },
+    moduleAcc: {
+      endless: endlessAcc.total > 0 ? (endlessAcc.correct / endlessAcc.total) * 100 : 0,
+      survival: survivalAcc.total > 0 ? (survivalAcc.correct / survivalAcc.total) * 100 : 0
+      // user requested: "Practice mode accuracy will not shown"
+    }
+  };
+};
+
 // ──────────────────── Reset ──────────────────────────────
 
 export const resetAllData = () => {
@@ -271,6 +351,7 @@ export default {
   getQuizHistory,
   getCategoryStats,
   updateCategoryStats,
+  getDashboardStats,
   getDailyActiveTime,
   recordActiveMinutes,
   resetAllData,

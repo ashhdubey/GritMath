@@ -2,7 +2,7 @@
   "expo": {
     "name": "GritMath",
     "slug": "gritmath",
-    "version": "2.0.4",
+    "version": "2.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -36,8 +36,8 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~1458041111"
+          "androidAppId": "ca-app-pub-1157854963201430~7548198352",
+          "iosAppId": "ca-app-pub-1157854963201430~7548198352"
         }
       ],
       [

@@ -86,7 +86,7 @@ const getDefaultRange = (difficulty = 'medium') => {
  */
 const generateMultiplication = (range) => {
   const a = randInt(range.min, range.max);
-  const b = randInt(2, 12);
+  const b = randInt(1, 10);
   return {
     category: 'multiplication',
     questionText: `${a} × ${b}`,
@@ -528,9 +528,58 @@ export const checkAnswer = (userAnswer, correctAnswer) => {
   return Number(userAnswer) === correctAnswer;
 };
 
+/**
+ * Generate a sequential list of questions for Daily Revision.
+ * selections = { tables: {min, max}, squares: {min, max}, cubes: {min, max} }
+ */
+export const generateSequentialRevision = (selections) => {
+  const questions = [];
+  
+  if (selections.tables) {
+    for (let i = selections.tables.min; i <= selections.tables.max; i++) {
+      for (let j = 1; j <= 10; j++) {
+        questions.push({
+          id: `rev-tbl-${i}-${j}-${Date.now()}`,
+          category: 'multiplication',
+          questionText: `${i} × ${j}`,
+          correctAnswer: i * j,
+          operands: { a: i, b: j },
+        });
+      }
+    }
+  }
+
+  if (selections.squares) {
+    for (let i = selections.squares.min; i <= selections.squares.max; i++) {
+      questions.push({
+        id: `rev-sq-${i}-${Date.now()}`,
+        category: 'square',
+        questionText: `${i}²`,
+        correctAnswer: i * i,
+        operands: { n: i },
+      });
+    }
+  }
+
+  if (selections.cubes) {
+    for (let i = selections.cubes.min; i <= selections.cubes.max; i++) {
+      questions.push({
+        id: `rev-cb-${i}-${Date.now()}`,
+        category: 'cube',
+        questionText: `${i}³`,
+        correctAnswer: i * i * i,
+        operands: { n: i },
+      });
+    }
+  }
+
+  return questions;
+};
+
 export default {
   generateQuestion,
   generateQuiz,
+  generateSequentialRevision,
   generateDistractors,
   checkAnswer,
   setSeed,

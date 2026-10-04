@@ -157,6 +157,23 @@ const useAppStore = create((set, get) => ({
   },
 
   /**
+   * Start a daily revision session.
+   */
+  startRevisionQuiz: (questions) => {
+    set({
+      quiz: {
+        isActive: true,
+        questions,
+        currentIndex: 0,
+        score: 0,
+        answers: [],
+        timeRemaining: 0,
+        isFinished: false,
+      },
+    });
+  },
+
+  /**
    * Submit an answer for the current question.
    * BUG-01 FIX: No longer mutates state directly. Uses immutable spread.
    */
@@ -233,6 +250,10 @@ const useAppStore = create((set, get) => ({
     // Calculate total time taken across all answered questions
     const totalTime = answers.reduce((sum, ans) => sum + (ans.timeTaken || 0), 0);
     
+    const correctCount = answers.filter(a => a.correct).length;
+    const skippedCount = answers.filter(a => a.userAnswer === null).length;
+    const wrongCount = answers.length - correctCount - skippedCount;
+    
     addToTotalSolved(totalQuestions);
     updateHighScore(config.category, score, totalQuestions);
     updateCategoryStats(config.category, totalQuestions, score, totalTime);
@@ -240,8 +261,13 @@ const useAppStore = create((set, get) => ({
       category: config.category,
       score,
       total: totalQuestions,
+      correct: correctCount,
+      wrong: wrongCount,
+      skipped: skippedCount,
       difficulty: config.difficulty,
-      answers,
+      isInfinite: !!config.isInfinite,
+      isSurvival: !!config.isSurvival,
+      answers, // Optional, can be huge
     });
   },
 

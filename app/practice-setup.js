@@ -19,6 +19,7 @@ export default function PracticeSetup() {
   const [difficulty, setDifficulty] = useState('medium');
   const [questionCount, setQuestionCount] = useState(10);
   const [rangeMode, setRangeMode] = useState('random');
+  const [singleNumber, setSingleNumber] = useState('5');
   const [customMin, setCustomMin] = useState('2');
   const [customMax, setCustomMax] = useState('25');
   const [timePerQ, setTimePerQ] = useState(15);
@@ -26,18 +27,29 @@ export default function PracticeSetup() {
 
   const handleStart = () => {
     // BUG-14 FIX: Validate custom range before starting
-    if (rangeMode === 'specific') {
+    if (rangeMode === 'range') {
       const mn = parseInt(customMin, 10);
       const mx = parseInt(customMax, 10);
       if (isNaN(mn) || isNaN(mx) || mn >= mx || mn < 1) {
         setRangeError('Min must be less than Max and both must be positive.');
         return;
       }
+    } else if (rangeMode === 'single') {
+      const num = parseInt(singleNumber, 10);
+      if (isNaN(num) || num < 1) {
+        setRangeError('Please enter a valid positive number.');
+        return;
+      }
     }
     setRangeError('');
-    const customRange = rangeMode === 'specific'
-      ? { min: parseInt(customMin, 10) || 2, max: parseInt(customMax, 10) || 25 }
-      : null;
+
+    let customRange = null;
+    if (rangeMode === 'range') {
+      customRange = { min: parseInt(customMin, 10) || 2, max: parseInt(customMax, 10) || 25 };
+    } else if (rangeMode === 'single') {
+      const val = parseInt(singleNumber, 10) || 5;
+      customRange = { min: val, max: val };
+    }
     updateQuizConfig({ category: catInfo.key, questionCount, difficulty, rangeMode, customRange, timePerQuestion: timePerQ });
     startQuiz();
     router.push('/quiz');
@@ -94,24 +106,34 @@ export default function PracticeSetup() {
       <Text style={[styles.label, { color: theme.textSecondary }]}>Number Range</Text>
       <View style={styles.pillRow}>
         <PillButton label="Random" active={rangeMode === 'random'} onPress={() => setRangeMode('random')} />
-        <PillButton label="Specific Range" active={rangeMode === 'specific'} onPress={() => setRangeMode('specific')} />
+        <PillButton label="Single Number" active={rangeMode === 'single'} onPress={() => setRangeMode('single')} />
+        <PillButton label="Range" active={rangeMode === 'range'} onPress={() => setRangeMode('range')} />
       </View>
 
-      {rangeMode === 'specific' && (
+      {rangeMode === 'single' && (
         <View style={styles.rangeRow}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.rangeLabel, { color: theme.textSecondary }]}>Min</Text>
+            <Text style={[styles.rangeLabel, { color: theme.textSecondary }]}>Number</Text>
+            <TextInput style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]} value={singleNumber} onChangeText={setSingleNumber} keyboardType="number-pad" placeholderTextColor={theme.textSecondary} />
+          </View>
+        </View>
+      )}
+
+      {rangeMode === 'range' && (
+        <View style={styles.rangeRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rangeLabel, { color: theme.textSecondary }]}>From</Text>
             <TextInput style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]} value={customMin} onChangeText={setCustomMin} keyboardType="number-pad" placeholderTextColor={theme.textSecondary} />
           </View>
           <Text style={[styles.rangeDash, { color: theme.textSecondary }]}>—</Text>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.rangeLabel, { color: theme.textSecondary }]}>Max</Text>
+            <Text style={[styles.rangeLabel, { color: theme.textSecondary }]}>To</Text>
             <TextInput style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]} value={customMax} onChangeText={setCustomMax} keyboardType="number-pad" placeholderTextColor={theme.textSecondary} />
           </View>
         </View>
       )}
 
-      {rangeMode === 'specific' && rangeError ? (
+      {(rangeMode === 'range' || rangeMode === 'single') && rangeError ? (
         <Text style={{ color: theme.danger || '#EF4444', fontSize: 13, marginTop: 8, fontWeight: '600' }}>
           ⚠ {rangeError}
         </Text>

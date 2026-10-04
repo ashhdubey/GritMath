@@ -1,8 +1,12 @@
 import mobileAds, { InterstitialAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 
-// IMPORTANT: Replace with real Ad Unit IDs before publishing to production!
-export const adUnitIdInterstitial = __DEV__ ? TestIds.INTERSTITIAL : TestIds.INTERSTITIAL;
-export const adUnitIdBanner = __DEV__ ? TestIds.BANNER : TestIds.BANNER;
+// Production GritMath Ad Unit IDs
+const BANNER_ID = 'ca-app-pub-1157854963201430/1801530158';
+const INTERSTITIAL_ID = 'ca-app-pub-1157854963201430/2404894336';
+const REWARDED_ID = 'ca-app-pub-1157854963201430/7988393504';
+
+export const adUnitIdInterstitial = __DEV__ ? TestIds.INTERSTITIAL : INTERSTITIAL_ID;
+export const adUnitIdBanner = __DEV__ ? TestIds.BANNER : BANNER_ID;
 
 let interstitialAd = null;
 let isInterstitialLoaded = false;
