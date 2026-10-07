@@ -125,8 +125,15 @@ export const recordPracticeDay = () => {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = toLocalDateString(yesterday);
 
+  // Timezone travel safety: parse dates to check if lastDate is in the future
+  const parsedLastDate = streak.lastDate ? new Date(streak.lastDate.split('-')) : null;
+  const parsedToday = new Date(today.split('-'));
+
   if (streak.lastDate === yesterdayStr) {
     streak.count += 1;
+  } else if (parsedLastDate && parsedLastDate > parsedToday) {
+    // User traveled backwards in time (timezone shift). Don't reset streak, just return.
+    return streak;
   } else {
     // If last practice was before yesterday, streak resets.
     streak.count = 1;

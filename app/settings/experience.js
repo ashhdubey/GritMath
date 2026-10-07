@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Switch, Alert, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Switch, Alert, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import useAppStore from '../../src/store/useAppStore';
@@ -10,15 +11,14 @@ export default function ExperienceSettings() {
   const router = useRouter();
   const theme = useTheme();
   
-  const { 
-    hapticsEnabled, setHapticsEnabled,
-    notifsEnabled, setNotifsEnabled,
-    notifsTime, setNotifsTime
-  } = useAppStore();
+  const hapticsEnabled = useAppStore(state => state.hapticsEnabled);
+  const setHapticsEnabled = useAppStore(state => state.setHapticsEnabled);
+  const notifsEnabled = useAppStore(state => state.notifsEnabled);
+  const setNotifsEnabled = useAppStore(state => state.setNotifsEnabled);
+  const notifsTime = useAppStore(state => state.notifsTime);
+  const setNotifsTime = useAppStore(state => state.setNotifsTime);
 
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [tempHour, setTempHour] = useState(20);
-  const [tempMinute, setTempMinute] = useState(0);
 
   const handleNotifToggle = async (val) => {
     if (val) {
@@ -28,7 +28,7 @@ export default function ExperienceSettings() {
         return;
       }
       setNotifsEnabled(true);
-      scheduleDailyReminder(notifsTime);
+      scheduleDailyReminder(notifsTime).catch(e => Alert.alert('Error', e.message));
     } else {
       setNotifsEnabled(false);
       cancelAllReminders();
@@ -36,21 +36,37 @@ export default function ExperienceSettings() {
   };
 
   const openTimePicker = () => {
-    const [h, m] = notifsTime.split(':').map(Number);
-    setTempHour(h || 20);
-    setTempMinute(m || 0);
     setShowTimePicker(true);
   };
 
-  const saveTime = () => {
-    const formatted = `${String(tempHour).padStart(2, '0')}:${String(tempMinute).padStart(2, '0')}`;
-    setNotifsTime(formatted);
-    if (notifsEnabled) scheduleDailyReminder(formatted);
-    setShowTimePicker(false);
+  const handleTimeChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    
+    if (event.type === 'set' && selectedDate) {
+      const h = selectedDate.getHours();
+      const m = selectedDate.getMinutes();
+      const formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      setNotifsTime(formatted);
+      if (notifsEnabled) {
+        scheduleDailyReminder(formatted).catch(e => Alert.alert('Error', e.message));
+      }
+    }
   };
 
-  const adjustHour = (delta) => setTempHour(prev => (prev + delta + 24) % 24);
-  const adjustMinute = (delta) => setTempMinute(prev => (prev + delta + 60) % 60);
+  const parseTime = (timeStr) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h || 20);
+    d.setMinutes(m || 0);
+    return d;
+  };
+
+  const formatAmPm = (timeStr) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -114,7 +130,7 @@ export default function ExperienceSettings() {
                 <Text style={[styles.rowTitle, { color: theme.text }]}>Reminder Time</Text>
                 <Text style={[styles.rowSubtitle, { color: theme.textSecondary }]}>Select hour and minute</Text>
               </View>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: theme.primary }}>{notifsTime}</Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: theme.primary }}>{formatAmPm(notifsTime)}</Text>
             </TouchableOpacity>
           )}
 
@@ -123,49 +139,16 @@ export default function ExperienceSettings() {
         <View style={{ height: 60 }} />
       </ScrollView>
 
-      {/* Time Picker Modal */}
-      <Modal visible={showTimePicker} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.timeModal, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Set Reminder Time</Text>
-            
-            <View style={styles.pickerRow}>
-              {/* Hour Picker */}
-              <View style={styles.pickerCol}>
-                <TouchableOpacity onPress={() => adjustHour(1)} style={styles.pickerBtn}>
-                  <Feather name="chevron-up" size={28} color={theme.textSecondary} />
-                </TouchableOpacity>
-                <Text style={[styles.pickerText, { color: theme.primary }]}>{String(tempHour).padStart(2, '0')}</Text>
-                <TouchableOpacity onPress={() => adjustHour(-1)} style={styles.pickerBtn}>
-                  <Feather name="chevron-down" size={28} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              
-              <Text style={[styles.pickerColon, { color: theme.text }]}>:</Text>
-
-              {/* Minute Picker */}
-              <View style={styles.pickerCol}>
-                <TouchableOpacity onPress={() => adjustMinute(5)} style={styles.pickerBtn}>
-                  <Feather name="chevron-up" size={28} color={theme.textSecondary} />
-                </TouchableOpacity>
-                <Text style={[styles.pickerText, { color: theme.primary }]}>{String(tempMinute).padStart(2, '0')}</Text>
-                <TouchableOpacity onPress={() => adjustMinute(-5)} style={styles.pickerBtn}>
-                  <Feather name="chevron-down" size={28} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalActionBtn} onPress={() => setShowTimePicker(false)}>
-                <Text style={{ fontSize: 16, color: theme.textSecondary, fontWeight: '600' }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalActionBtn} onPress={saveTime}>
-                <Text style={{ fontSize: 16, color: theme.primary, fontWeight: '700' }}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Native Time Picker */}
+      {showTimePicker && (
+        <DateTimePicker
+          value={parseTime(notifsTime)}
+          mode="time"
+          is24Hour={false} // Enables AM/PM selection
+          display="default"
+          onChange={handleTimeChange}
+        />
+      )}
 
     </View>
   );
@@ -217,15 +200,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingRight: 12,
   },
-  
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  timeModal: { width: '100%', borderRadius: 24, padding: 24, borderWidth: 1, alignItems: 'center' },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 24 },
-  pickerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 32 },
-  pickerCol: { alignItems: 'center', width: 70 },
-  pickerBtn: { padding: 12 },
-  pickerText: { fontSize: 40, fontWeight: '800', marginVertical: 8 },
-  pickerColon: { fontSize: 40, fontWeight: '800', marginHorizontal: 12, marginBottom: 8 },
-  modalActions: { flexDirection: 'row', width: '100%', borderTopWidth: 1, borderTopColor: 'rgba(150,150,150,0.2)', paddingTop: 16 },
-  modalActionBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
 });

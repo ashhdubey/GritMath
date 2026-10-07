@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../src/theme';
 import useAppStore from '../src/store/useAppStore';
+import * as Application from 'expo-application';
 
 const LINKS = [
   { icon: 'github', label: 'GitHub', username: 'ashhdubey', url: 'https://github.com/ashhdubey' },
@@ -35,7 +36,7 @@ export default function About() {
               GritMath
             </Text>
             <Text style={[styles.devTitle, { color: theme.primary }]}>
-              Version {require('../package.json').version}
+              Version {Application.nativeApplicationVersion || '1.9.0'}
             </Text>
           </View>
         </View>

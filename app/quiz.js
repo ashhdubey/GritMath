@@ -17,7 +17,6 @@ export default function Quiz() {
   const theme = useTheme();
   const { quiz, submitAnswer, tickTimer, timeUp, endQuiz, manuallyFinishQuiz, quizConfig } = useAppStore();
   const [feedback, setFeedback] = useState(null); // { correct: bool, correctAnswer }
-  const flatListRef = useRef(null);
   const timerWidth = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -32,10 +31,10 @@ export default function Quiz() {
 
   // Timer tick
   useEffect(() => {
-    if (!quiz.isActive || quiz.isFinished) return;
+    if (!quiz.isActive || quiz.isFinished || feedback) return;
     const interval = setInterval(() => { tickTimer(); }, 1000);
     return () => clearInterval(interval);
-  }, [quiz.isActive, quiz.isFinished]);
+  }, [quiz.isActive, quiz.isFinished, feedback]);
 
   // Timer bar animation
   useEffect(() => {

@@ -1,7 +1,3 @@
-/**
- * Onboarding Screen — 3-slide intro to GritMath's zero-distraction philosophy.
- */
-
 import { useState, useRef } from 'react';
 import {
   View,
@@ -13,7 +9,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '../src/theme';
 import { setOnboardingDone } from '../src/storage/storage';
 
@@ -22,24 +17,27 @@ const { width } = Dimensions.get('window');
 const SLIDES = [
   {
     id: '1',
-    emoji: '🧘',
+    icon: 'target',
     title: 'Zero Distractions',
-    subtitle: 'The ultimate free math trainer.\nMaster mental math at your pace.',
-    gradient: ['#6C5CE7', '#A29BFE'],
+    subtitle: 'The ultimate free math trainer. Master mental math at your own pace without any clutter.',
+    color: '#0056D2',
+    accent: '#E6F0FF',
   },
   {
     id: '2',
-    emoji: '⚡',
+    icon: 'zap',
     title: 'Speed is the Goal',
-    subtitle: 'Timed practice with instant feedback.\nTrain like a competitor.',
-    gradient: ['#00B894', '#55EFC4'],
+    subtitle: 'Timed practice with instant feedback. Train your brain to calculate faster under pressure.',
+    color: '#10B981',
+    accent: '#D1FAE5',
   },
   {
     id: '3',
-    emoji: '📈',
+    icon: 'trending-up',
     title: 'Track Your Growth',
-    subtitle: 'Daily streaks and high scores,\nall stored on your device.',
-    gradient: ['#0984E3', '#74B9FF'],
+    subtitle: 'Daily streaks and high scores, stored securely on your device. Watch yourself improve.',
+    color: '#F59E0B',
+    accent: '#FEF3C7',
   },
 ];
 
@@ -49,36 +47,32 @@ const SlideItem = ({ item, index, scrollX }) => {
 
   const scale = scrollX.interpolate({
     inputRange,
-    outputRange: [0.8, 1, 0.8],
+    outputRange: [0.5, 1, 0.5],
+    extrapolate: 'clamp',
+  });
+
+  const translateY = scrollX.interpolate({
+    inputRange,
+    outputRange: [50, 0, 50],
     extrapolate: 'clamp',
   });
 
   const opacity = scrollX.interpolate({
     inputRange,
-    outputRange: [0.4, 1, 0.4],
+    outputRange: [0, 1, 0],
     extrapolate: 'clamp',
   });
 
   return (
     <View style={styles.slide}>
-      {/* Background glowing orb for glassmorphism effect */}
-      <Animated.View style={[
-        styles.glowOrb, 
-        { 
-          backgroundColor: item.gradient[0],
-          transform: [{ scale }]
-        }
-      ]} />
+      <Animated.View style={[styles.iconContainer, { transform: [{ scale }], backgroundColor: theme.isDark ? item.color + '20' : item.accent }]}>
+        <Feather name={item.icon} size={64} color={item.color} />
+      </Animated.View>
       
-      <BlurView intensity={theme.isDark ? 80 : 100} tint={theme.isDark ? 'dark' : 'light'} style={styles.glassCard}>
-        <Animated.View style={{ opacity, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
-          <View style={[styles.emojiCircle, { backgroundColor: item.gradient[0] + '20', borderColor: item.gradient[0] + '50', borderWidth: 1 }]}>  
-            <Text style={styles.emoji}>{item.emoji}</Text>
-          </View>
-          <Text style={[styles.title, { color: item.themeText }]}>{item.title}</Text>
-          <Text style={[styles.subtitle, { color: item.themeSub }]}>{item.subtitle}</Text>
-        </Animated.View>
-      </BlurView>
+      <Animated.View style={{ opacity, transform: [{ translateY }], paddingHorizontal: 32, alignItems: 'center' }}>
+        <Text style={[styles.title, { color: theme.text }]}>{item.title}</Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{item.subtitle}</Text>
+      </Animated.View>
     </View>
   );
 };
@@ -114,37 +108,44 @@ export default function Onboarding() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {!isLastSlide && (
-        <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-          <Text style={[styles.skipText, { color: theme.textSecondary }]}>Skip</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.header}>
+        {!isLastSlide ? (
+          <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+            <Text style={[styles.skipText, { color: theme.textSecondary }]}>Skip</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.skipBtn} />
+        )}
+      </View>
 
-      <Animated.FlatList
-        ref={flatListRef}
-        data={SLIDES.map(s => ({...s, themeText: theme.text, themeSub: theme.textSecondary}))}
-        renderItem={({ item, index }) => (
-          <SlideItem item={item} index={index} scrollX={scrollX} />
-        )}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
-        )}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-        scrollEventThrottle={16}
-      />
+      <View style={styles.flatListContainer}>
+        <Animated.FlatList
+          ref={flatListRef}
+          data={SLIDES}
+          renderItem={({ item, index }) => (
+            <SlideItem item={item} index={index} scrollX={scrollX} />
+          )}
+          keyExtractor={(item) => item.id}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: true }
+          )}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+          scrollEventThrottle={16}
+          bounces={false}
+        />
+      </View>
 
       <View style={styles.bottomSection}>
         <View style={styles.dotsContainer}>
           {SLIDES.map((_, i) => {
-            const dotScale = scrollX.interpolate({
+            const dotWidth = scrollX.interpolate({
               inputRange: [(i - 1) * width, i * width, (i + 1) * width],
-              outputRange: [1, 1.5, 1],
+              outputRange: [8, 24, 8],
               extrapolate: 'clamp',
             });
             const dotOpacity = scrollX.interpolate({
@@ -158,9 +159,9 @@ export default function Onboarding() {
                 style={[
                   styles.dot,
                   {
-                    transform: [{ scale: dotScale }],
+                    width: dotWidth,
                     opacity: dotOpacity,
-                    backgroundColor: SLIDES[currentIndex].gradient[0],
+                    backgroundColor: theme.primary,
                   },
                 ]}
               />
@@ -169,11 +170,11 @@ export default function Onboarding() {
         </View>
 
         <TouchableOpacity
-          style={[styles.nextBtn, { backgroundColor: SLIDES[currentIndex].gradient[0] }]}
+          style={[styles.nextBtn, { backgroundColor: theme.primary }]}
           onPress={handleNext}
           activeOpacity={0.8}
         >
-          <Text style={styles.nextText}>{isLastSlide ? "Get Started" : "Next"}</Text>
+          <Text style={styles.nextText}>{isLastSlide ? "Start Training" : "Continue"}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -182,21 +183,17 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  skipBtn: { position: 'absolute', top: 60, right: 24, zIndex: 10, paddingHorizontal: 16, paddingVertical: 8 },
+  header: { height: 100, justifyContent: 'flex-end', alignItems: 'flex-end', paddingHorizontal: 24, paddingBottom: 16 },
+  skipBtn: { padding: 8 },
   skipText: { fontSize: 16, fontWeight: '600' },
+  flatListContainer: { flex: 1 },
   slide: { width, flex: 1, justifyContent: 'center', alignItems: 'center' },
-  glowOrb: { position: 'absolute', width: 300, height: 300, borderRadius: 150, opacity: 0.4 },
-  glassCard: { width: '85%', height: '60%', borderRadius: 32, padding: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  emojiCircle: { width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: 32 },
-  emoji: { fontSize: 56 },
-  title: { fontSize: 30, fontWeight: '900', textAlign: 'center', marginBottom: 16, letterSpacing: -0.5 },
-  subtitle: { fontSize: 16, textAlign: 'center', lineHeight: 24, fontWeight: '500' },
-  bottomSection: { paddingHorizontal: 24, paddingBottom: 50, alignItems: 'center' },
-  dotsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 36, gap: 12 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  nextBtn: { width: '100%', height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
+  iconContainer: { width: 140, height: 140, borderRadius: 70, justifyContent: 'center', alignItems: 'center', marginBottom: 60 },
+  title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 16, letterSpacing: -0.5 },
+  subtitle: { fontSize: 16, textAlign: 'center', lineHeight: 26, fontWeight: '500' },
+  bottomSection: { paddingHorizontal: 32, paddingBottom: 60, alignItems: 'center' },
+  dotsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 40, gap: 8, height: 8 },
+  dot: { height: 8, borderRadius: 4 },
+  nextBtn: { width: '100%', height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', shadowColor: '#0056D2', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
   nextText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 0.5 },
-  goalContainer: { marginTop: 24, width: '100%', gap: 12 },
-  goalBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1 },
-  goalText: { fontSize: 16, fontWeight: '600' }
 });

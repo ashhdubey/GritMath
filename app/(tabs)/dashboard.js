@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, Modal } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { getTotalSolved, getStreak, getDashboardStats } from '../../src/storage/storage';
@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [streakData, setStreakData] = useState({ count: 0, max: 0, lastDate: null });
   const [timeRange, setTimeRange] = useState('today');
   const [dashboardStats, setDashboardStats] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   useFocusEffect(useCallback(() => {
     setTotalSolved(getTotalSolved());
@@ -74,12 +75,13 @@ export default function Dashboard() {
       }
     ];
     
-    // If both are 0, chart might throw error or look empty
+    // If both are 0, return empty state
     if (data[0].population === 0 && data[1].population === 0) {
-      data[0].population = 1; // Fake data just to show empty chart
-      data[1].population = 1;
-      data[0].color = theme.border;
-      data[1].color = theme.border;
+      return (
+        <View style={[styles.chartContainer, { backgroundColor: theme.surface, borderColor: theme.border, justifyContent: 'center' }]}>
+          <Text style={{ color: theme.textSecondary }}>No data available for this time range.</Text>
+        </View>
+      );
     }
 
     return (
@@ -140,7 +142,7 @@ export default function Dashboard() {
       <View style={styles.section}>
         <View style={[styles.sectionHeader, { flexDirection: 'row', alignItems: 'center' }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Performance</Text>
-          <TouchableOpacity onPress={() => Alert.alert("Performance Tracking", "Performance tracking dynamically aggregates your Endless and Survival mode scores across the selected time range.\n\n(Revision and Practice modes are excluded)")} style={{ marginLeft: 8 }}>
+          <TouchableOpacity onPress={() => setShowTooltip(true)} style={{ marginLeft: 8 }}>
             <Feather name="info" size={16} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -171,6 +173,28 @@ export default function Dashboard() {
 
       <AdBanner />
       <View style={{ height: 120 }} />
+
+      <Modal transparent visible={showTooltip} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.modalIconBg, { backgroundColor: theme.primaryLight }]}>
+              <Feather name="info" size={32} color={theme.primary} />
+            </View>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Performance Tracking</Text>
+            <Text style={[styles.modalText, { color: theme.textSecondary }]}>
+              Performance tracking dynamically aggregates your Endless and Survival mode scores across the selected time range.
+              {'\n\n'}
+              (Revision and Practice modes are excluded).
+            </Text>
+            <TouchableOpacity 
+              style={[styles.modalBtn, { backgroundColor: theme.primary }]} 
+              onPress={() => setShowTooltip(false)}
+            >
+              <Text style={styles.modalBtnText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -200,5 +224,13 @@ const styles = StyleSheet.create({
   perfValue: { fontSize: 24, fontWeight: '800', marginBottom: 4 },
   perfLabel: { fontSize: 12, fontWeight: '600' },
 
-  chartContainer: { borderRadius: 20, borderWidth: 1, paddingVertical: 20, alignItems: 'center', overflow: 'hidden' }
+  chartContainer: { borderRadius: 20, borderWidth: 1, paddingVertical: 20, alignItems: 'center', overflow: 'hidden' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalContent: { width: '100%', borderRadius: 24, padding: 24, alignItems: 'center', borderWidth: 1 },
+  modalIconBg: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 22, fontWeight: '800', marginBottom: 12 },
+  modalText: { fontSize: 15, textAlign: 'center', marginBottom: 24, lineHeight: 22 },
+  modalBtn: { width: '100%', height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
+  modalBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

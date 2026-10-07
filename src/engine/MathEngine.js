@@ -353,12 +353,14 @@ const generateDistractors = (correctAnswer, count = 3) => {
 
   // Fallback: if we still don't have enough, force‑generate with sequential offsets
   let fallbackOffset = 1;
-  while (distractors.size < count) {
+  let fallbackAttempts = 0;
+  while (distractors.size < count && fallbackAttempts < 50) {
     const candidate = correct + fallbackOffset;
     if (candidate > 0 && candidate !== correct && !distractors.has(candidate)) {
       distractors.add(candidate);
     }
     fallbackOffset = fallbackOffset > 0 ? -fallbackOffset : -fallbackOffset + 1;
+    fallbackAttempts++;
   }
 
   return Array.from(distractors);
